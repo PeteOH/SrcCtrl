@@ -1,0 +1,36 @@
+; if usename and password supplied then assume we need to logon
+test: <p1>
+if empty: $Process
+
+$loginProcess
+	;echo: off
+    on error: $Failed Login
+    timer: 50
+    wait for: Name:
+    send: <p1><CR>
+    wait for: Password:
+    send: <p2><CR>
+    wait for: <NL>$
+    echo: on
+    Notify: Login is complete
+    display: <CSI>H<CSI>J
+    send: <CR>
+    goto $Process
+
+$Failed Login:
+    echo: on
+    notify: Login failed.
+    exit
+
+$Process:
+    ;processing begins
+	wait for: USER>
+	send: set $namespace="DEV"<CR>
+	send: do ##class(CTRL.Code).projectdir("C:\DEV\SrcCtrl")<CR>
+	send: do ##class(CTRL.Code).srcdir("src")<CR>
+	send: do ##class(CTRL.Code).export("CTRL")<CR>
+	
+	timer: 120
+	wait for: DEV>
+	terminate
+	
