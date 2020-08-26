@@ -20,6 +20,11 @@ To manually use the class in IRIS
 USER> do ##class(CTRL.Code).projectdir("C:\localfolder\project")
 
 USER> do ##class(CTRL.Code).export("PKG,PKGB.SUBPKG")
+
+or 
+
+USER> do ##class(CTRL.Code).export()
+
 ```
    This will export all classes etc starting with "PKG" and "PKGB.SUBPKG" to the folder `C:\localfolder\project\src` in UDL format.  
    If you want to change "src" to something else `do ##class(CTRL.Code).srcdir("other")`
