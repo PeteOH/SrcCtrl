@@ -32,5 +32,6 @@ there are 3 sample scripts included:
   * **gitupdate.sh** this is designed to be run via GIT BASH, to _git add_ all mods, _git commit_ with a message including the datetime and then _git push_  
   
   * **update.bat** this batch file calls the preceeding scripts  
+    edit this file to match the destination folder, the namespace and the packages (comma seperated list) to be exported.
     
 
