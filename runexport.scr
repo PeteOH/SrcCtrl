@@ -1,14 +1,15 @@
-; if usename and password supplied then assume we need to logon
+echo: off
 logfile: export.log
 
+; must have p1 = namespace, p2 = project folder, p3 = package list 
 test: <p2>
 if empty: $noparam
 
+; if usename and password supplied then assume we need to logon
 test: <p4>
 if empty: $Process
 
 $loginProcess
-	;echo: off
     on error: $Failed Login
     timer: 50
     wait for: Name:
@@ -25,7 +26,9 @@ $loginProcess
 $Failed Login:
     echo: on
     notify: Login failed.
-    exit
+	wait for: <NL>
+	closelog
+	terminate
 
 $Process:
     ;processing begins
@@ -52,4 +55,5 @@ $noparam
 	notify: requires Param3=export list (eg: package1,package2)
 	notify: optional Param3=username
 	notify: optional Param3=password
-	exit
+	closelog
+	terminate
