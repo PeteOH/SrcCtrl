@@ -11,7 +11,7 @@ Copy the script files to the root folder of your IRIS project. Edit the **update
 
 On the IRIS server you will need to make sure that the folder for the GIT project is correctly configured.
   * **git clone** your project. 
-  * store git credentials (Good article: <a target="_blank" href="https://www.shellhacks.com/git-config-username-password-store-credentials">Git Config Username & Password</a> )
+  * store git credentials (Good article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a> )
 
 ## Manually run
 
@@ -21,8 +21,8 @@ USER> do ##class(CTRL.Code).projectdir("C:\localfolder\project")
 
 USER> do ##class(CTRL.Code).export("PKG,PKGB.SUBPKG")
 ```
-   This will export all classes etc starting with "PKG" and "PKGB.SUBPKG" to the folder C:\localfolder\project\src in UDL format.
-   if you want to change "src" to something else `do ##class(CTRL.Code).srcdir("other")`
+   This will export all classes etc starting with "PKG" and "PKGB.SUBPKG" to the folder `C:\localfolder\project\src` in UDL format.  
+   If you want to change "src" to something else `do ##class(CTRL.Code).srcdir("other")`
    
 ## Scripted run
 
