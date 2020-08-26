@@ -4,5 +4,5 @@ echo "${cmt}"
 git add .
 git commit -m "${cmt}" 
 git push
-echo Press Enter...
-read
+#echo Press Enter...
+#read
