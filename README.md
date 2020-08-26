@@ -11,7 +11,7 @@ Copy the script files to the root folder of your IRIS project. Edit the **update
 
 On the IRIS server you will need to make sure that the folder for the GIT project is correctly configured.
   * **git clone** your project. 
-  * store git credentials (Good article: [Git Config Username & Password](https://www.shellhacks.com/git-config-username-password-store-credentials/#:~:text=When%20credentials%20storage%20is%20enabled,provide%20the%20username%20and%20password.)
+  * store git credentials (Good article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials/#:~:text=When%20credentials%20storage%20is%20enabled,provide%20the%20username%20and%20password." target="_blank">Git Config Username & Password</a> )
 
 ## Manually run
 
