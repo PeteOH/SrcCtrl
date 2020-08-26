@@ -1,5 +1,10 @@
 ; if usename and password supplied then assume we need to logon
-test: <p1>
+logfile: export.log
+
+test: <p2>
+if empty: $noparam
+
+test: <p4>
 if empty: $Process
 
 $loginProcess
@@ -7,9 +12,9 @@ $loginProcess
     on error: $Failed Login
     timer: 50
     wait for: Name:
-    send: <p1><CR>
+    send: <p3><CR>
     wait for: Password:
-    send: <p2><CR>
+    send: <p4><CR>
     wait for: <NL>$
     echo: on
     Notify: Login is complete
@@ -25,12 +30,26 @@ $Failed Login:
 $Process:
     ;processing begins
 	wait for: USER>
-	send: set $namespace="DEV"<CR>
-	send: do ##class(CTRL.Code).projectdir("C:\DEV\SrcCtrl")<CR>
+	;send: set $namespace="DEV"<CR>
+	;send: do ##class(CTRL.Code).projectdir("C:\DEV\SrcCtrl")<CR>
+	;send: do ##class(CTRL.Code).export("CTRL")<CR>
+	send: set $namespace="<p1>"<CR>
+	wait for: <p1>>
 	send: do ##class(CTRL.Code).srcdir("src")<CR>
-	send: do ##class(CTRL.Code).export("CTRL")<CR>
+	wait for: <p1>>
+	send: do ##class(CTRL.Code).projectdir("<p2>")<CR>
+	wait for: <p1>>
+	send: do ##class(CTRL.Code).export("<p3>")<CR>
+	wait for: <p1>>
 	
-	timer: 120
-	wait for: DEV>
+	closelog
 	terminate
 	
+$noparam
+    wait for: USER>
+	notify: requires Param1=Namespace
+	notify: requires Param2=project dir (eg: C:\DEV\project)
+	notify: requires Param3=export list (eg: package1,package2)
+	notify: optional Param3=username
+	notify: optional Param3=password
+	exit
