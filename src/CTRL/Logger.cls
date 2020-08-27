@@ -2,7 +2,7 @@ Class CTRL.Logger Extends %RegisteredObject
 {
 
 /// Current log level
-Parameter LOGLEVEL = 3;
+Parameter LOGLEVEL = 2;
 
 Parameter DEBUG = 1;
 

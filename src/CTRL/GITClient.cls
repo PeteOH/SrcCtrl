@@ -5,7 +5,7 @@ Class CTRL.GITClient Extends %RegisteredObject
 Parameter SRCDIRNAME = "src/";
 
 /// Logger instance to display messages
-Property Logger As Studio.SourceControl.Util.Logger;
+Property Logger As CTRL.Logger;
 
 /// Path to GIT binaries (with trailing slash)
 Property GitPath As %String(MAXLEN = "");
@@ -299,9 +299,7 @@ Method RunCmd(cmd As %String, ByRef pOutput, pLog As %Boolean = 1, pAsync As %Bo
 			set cmds = cmds_$lb(cmd)
 			set cmd = $listtostring(cmds, " && ")
 		}
-		
-		
-		
+	
 		set stdout = "/STDOUT="""_..OutputFile_""""
 		set stderr = "/STDERR="""_..ErrorFile_""""
 		set logit = ""
@@ -314,9 +312,9 @@ Method RunCmd(cmd As %String, ByRef pOutput, pLog As %Boolean = 1, pAsync As %Bo
 
 		set flags = "/SHELL /NOQUOTE "_stdout_" "_stderr_logit_async_stdin
 		//  
-		do:(pLog) ..Logger.Info($c(13)_">"_text)
-		do ..Logger.Debug(cmd)
-		do ..Logger.Debug(flags)
+		//do:(pLog) ..Logger.Info($c(13)_">"_text)
+		//do ..Logger.Debug(cmd)
+		//do ..Logger.Debug(flags)
 
 		// $zf(-1) is deprecated - replaced with $zf(-100)
 		//set rc=$zf(-1,cmd_" 2> """_..ErrorFile_""" > """_..OutputFile_"""")
