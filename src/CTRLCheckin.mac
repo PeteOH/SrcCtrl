@@ -69,6 +69,7 @@ CTRLCheckin ; execute github add,commit and push
 			
 			// Now call GitHub add, commit, push
 
+			w !,!," Updating GIT..."
 			// Get the Message for the Commit
 			Do
 			{
@@ -85,7 +86,8 @@ CTRLCheckin ; execute github add,commit and push
 
 			Do git.Push(.sout)
 
-			
+			w !,!,"FINISHED."
+						
 		} 
 		else
 		{

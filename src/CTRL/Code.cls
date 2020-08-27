@@ -39,7 +39,7 @@ ClassMethod export(packagelist = "", generated = 0, system = 0, percent = 0, map
 
 									
 						
-	w "#; Exporting to ", ..workdir(),!
+	w !,!,"#; Exporting to ", ..workdir(),!
 	
 	s masks = $LISTFROMSTRING(packagelist,",")
 
