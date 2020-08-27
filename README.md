@@ -26,9 +26,9 @@ or
 USER> do ##class(CTRL.Code).export()
 
 ```
-   This will export all classes etc starting with "PKG" and "PKGB.SUBPKG" to the folder `C:\localfolder\project\src` in UDL format.  
-   If you want to change "src" to something else `do ##class(CTRL.Code).srcdir("other")`
-
+   This will export all classes etc to the folder `C:\localfolder\project\src` in UDL format.  
+   If you want to change "src" to something else `do ##class(CTRL.Code).srcdir("other")`  
+   It will then run the commands to add these to the git repository.
 
 ## Routine run export AND Git commit
 
