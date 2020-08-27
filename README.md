@@ -70,4 +70,18 @@ there are 3 sample scripts included:
   * **update.bat** this batch file calls the preceeding scripts  
     edit this file to match the destination folder, the namespace and the packages (comma seperated list) to be exported.
     
+## IMPORT
+
+assuming you have **git pull**'ed the code from git, then just reverse the import:
+```
+USER> do ##class(CTRL.Code).projectdir("C:\DEV\gitrepo")
+
+USER> do ##class(CTRL.Code).import()
+```
+
+this will recurse through the folders and import and compile the files.
+
+
+
+```
 
