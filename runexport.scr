@@ -1,4 +1,3 @@
-echo: off
 logfile: export.log
 
 ; must have p1 = namespace, p2 = project folder, p3 = package list 
