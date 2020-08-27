@@ -1,17 +1,17 @@
 # SrcCtrl
-Utility that will export code from an IRIS Namespace to a folder on the server.
+Utility that will export code from an IRIS Namespace to a folder on the server. Including the ability to commit to a git repository
 
 ## Installation
+
+If the code is not yet in a Git Repository then create an empty repoository first.  
+On the server perform a **git clone** to a local folder.  
+You do not need to store credentials - the routine will prompt for git user and passwd. If you wish to then you can follow article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a>  
 
 Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance.
   * If you just want this on a single Namespace, then import them to that namespace. 
   * If you want it available to all namespaces then map them the the %ALL namespace.
   
 Copy the script files to the root folder of your IRIS project. Edit the **update.bat** to make sure that paths are correct (keep in mind that this is for the IRIS Server).
-
-On the IRIS server you will need to make sure that the folder for the GIT project is correctly configured.
-  * **git clone** your project. 
-  * store git credentials (Good article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a> )
 
 ## Manually run export ONLY
 
