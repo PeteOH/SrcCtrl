@@ -69,12 +69,13 @@ CTRLCheckin ; execute github add,commit and push
 			
 			// Now call GitHub add, commit, push
 
-			w !,!," Updating GIT..."
 			// Get the Message for the Commit
 			Do
 			{
-				r !,!, "Enter the Git Message for Commit:", cmtmsg
+				r !,!, "Enter the Git Message for Commit: ", cmtmsg
 			} while (cmtmsg="")	
+
+			w !,!," Updating GIT..."
 
 			Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,"","","",pout,perr,gitrepo)
 
