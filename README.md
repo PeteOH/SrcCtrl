@@ -37,10 +37,13 @@ Export Packages - ALL for all packages (): ALL
 
 #; Exported to C:\DEV\gitrepo\src
  
-Enter the Git Message for Commit:meaningful message
+Enter the Git Message for Commit: A meaningful message
+ 
+ Updating GIT...
+ 
+FINISHED.
 
-
-DEV>
+USER>
 
 ```
    This will export all classes etc starting with "PKG" and "PKGB.SUBPKG" to the folder `C:\localfolder\project\src` in UDL format.  
