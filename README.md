@@ -19,7 +19,7 @@ Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance 
 Start a terminal, change to the relevant Namespace...
 
 ```
-USER> do ^CTRLCheckin
+USER> do ^CTRL.Checkin
 
 This routine will export code from this namespace and push to github
 Are you sure (Y/n)?
