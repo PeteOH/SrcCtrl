@@ -1,0 +1,1445 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="IRIS" version="26" zv="IRIS for Windows (x86-64) 2020.1 (Build 202U)" ts="2020-08-28 10:18:18">
+<Routine name="CTRL.Checkin" type="MAC" languagemode="0" timestamp="65619,36426.232763"><![CDATA[
+Checkin ; execute github add,commit and push
+
+	s defgitrepo=""
+	s defprojectdir=""
+	s defgitpath=""
+		
+	s:($D(^CTRL.Code("gitrepo"))) defgitrepo=^CTRL.Code("gitrepo")  // "https://github.com/peteoh/srcctrl.git"
+	s:($D(^CTRL.Code("projectdir"))) defprojectdir=^CTRL.Code("projectdir") //"C:\DEV\srcctrl"
+	s:($D(^CTRL.Code("gitpath"))) defgitpath=^CTRL.Code("gitpath") // "C:\Git\Bin"
+
+	w !, "This routine will export code from this namespace and push to github"
+	r !, "Are you sure (Y/n)?", cont
+    w !
+    
+	if ((cont = "Y") || (cont = "y") || (cont = "")) {
+		w !, "GIT path ("_defgitpath_"):"  r gitpath
+		w !, "GIT repo ("_defgitrepo_"):"  r gitrepo
+		w !, "Local Dir ("_defprojectdir_"):"  r projectdir	
+	
+		// if values are set then save to globals
+		s:(gitpath'="") ^CTRL.Code("gitpath")=gitpath		
+		s:(gitrepo'="") ^CTRL.Code("gitrepo")=gitrepo		
+		s:(projectdir'="") ^CTRL.Code("projectdir")=projectdir
+
+		// if values are not set then get the default values (from globals)
+		s:(gitpath="") gitpath = defgitpath
+		s:(gitrepo="") gitrepo = defgitrepo
+		s:(projectdir="") projectdir = defprojectdir
+
+		if ( (gitrepo'="") && (projectdir'="") && (gitpath'="") ) {
+
+			r !, "Enter GIT Username:", user
+			
+			if (user'="")
+			{
+				write !,"Enter GIT Password: "
+				use 0:(:/echo=0)  
+				set pass=""
+	    		for  read *c quit:c=13  set pass=pass_$c(c) write "*"
+	    		use 0:(:/echo=1)
+				
+				s userpass = user_":"_pass_"@"
+				
+				s $p(gitrepo,"/",3) = userpass_$p(gitrepo,"/",3)
+			}
+			// w !, gitrepo
+
+			// Export the Code
+			
+			// get last package list	
+			s defpackages=""
+			s:($D(^CTRL.Code("packages"))) defpackages=^CTRL.Code("packages")  // "PKG,PKG.SUBPKG"
+			s:(defpackages="") defpackages = "ALL"
+			
+			w !, "Export Packages - ALL for all packages ("_defpackages_"):"  r packages	
+
+			// if values are set then save to globals
+			s:(packages'="") ^CTRL.Code("packages")=packages		
+			// if values are not set then get the default values (from globals)
+			s:(packages="") packages = defpackages
+			
+			s:(packages="ALL") packages=""
+
+			do ##Class(CTRL.Code).export(packages)
+			set wrkdir = ##class(CTRL.Code).workdir()
+			Set pout=wrkdir_"\git.out"
+			Set perr=wrkdir_"\git.err"
+			
+			// Now call GitHub add, commit, push
+
+			// Get the Message for the Commit
+			Do
+			{
+				r !,!, "Enter the Git Message for Commit: ", cmtmsg
+			} while (cmtmsg="")	
+
+			w !,!," Updating GIT..."
+
+			Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,"","","",pout,perr,gitrepo)
+
+			set sout = ""
+			
+			Do git.Add("",.sout,1)
+
+			Do git.Commit("",cmtmsg,.sout)
+
+			Do git.Push(.sout)
+
+			w !,!,"FINISHED."
+						
+		} 
+		else
+		{
+			w !, "ERROR: you need to provide the git repo (eg https://github.com/name/repo.git)"
+			W !, "       and git binary folder (eg: c:\git\bin )"
+			W !, "       and local folder (eg: c:\localfolder )"
+		}
+
+	
+	   
+   }  
+
+]]></Routine>
+
+
+<Class name="CTRL.Code">
+<Super>%Persistent</Super>
+<TimeChanged>65619,36926.965298</TimeChanged>
+<TimeCreated>65615,77815.24873</TimeCreated>
+
+<Method name="pkgmatch">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>masks,code</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	if ( $LG(masks,1) = "" )
+	{
+		s exp = 1
+	}
+	else
+	{ 
+		s exp = 0 
+		for i=1:1:$LL(masks) 
+		{ 
+			s exp = exp || ( $LG(masks,i) = $e(code,1,$l($LG(masks,i)))) 
+		}  
+	}
+	quit exp
+]]></Implementation>
+</Method>
+
+<Method name="export">
+<Description>
+export all available code</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>packagelist="",generated=0,system=0,percent=0,mapped=0,dfi=0</FormalSpec>
+<Implementation><![CDATA[
+
+	#define export(%code, %file) s sc = $system.OBJ.ExportUDL(%code, %file,"/diffexport") ##continue
+								 w:sc !,code, " -> ", $piece(filename,..workdir(),2), " "  d:'sc $system.OBJ.DisplayError(sc)
+
+	#define isGenerated(%code) ##class(%RoutineMgr).IsGenerated( %code )
+	#define isPercented(%code) ("%" = $e(%code))
+	#define isMapped(%code) ##class(%RoutineMgr).IsMapped( %code )
+	#define log w !, code, " -> ", $piece(filename,..workdir(),2), " "
+	
+	#define mkdir(%filename) ##continue
+			s path = ##class(%File).GetDirectory( %filename ) ##continue
+			if '##class(%File).DirectoryExists( path ) { ##continue
+				s sc = ##class(%File).CreateDirectoryChain( path ) ##continue
+				w !, "mkdir ", path, " ", sc ##continue
+			}
+
+									
+						
+	w !,!,"#; Exporting to ", ..workdir(),!
+	
+	s masks = $LISTFROMSTRING(packagelist,",")
+
+	#; classes
+	s rs = ##class(%ResultSet).%New("%Dictionary.ClassDefinition:Summary")
+	if rs.Execute() {
+
+		while rs.%Next(){
+
+			s code = rs.Name _ ".cls", isSystem = rs.System
+			if ( 'system && isSystem ) continue
+			if ( 'generated && $$$isGenerated( code ) ) continue
+			if ( 'percent && $$$isPercented( code ) ) continue
+			if ( 'mapped && $$$isMapped( code ) ) continue
+			
+			//POH allowing for a list of filters
+			if '..pkgmatch( masks, code ) continue
+			
+			
+			// got here so exporting
+			
+			s filename = ..filename( code )
+			$$$mkdir( filename )
+			//$$$log
+			$$$export( code, filename )
+
+		} s rs=""
+	}
+
+	#; routines
+	s rs = ##class(%ResultSet).%New("%Routine:RoutineList")
+	if rs.Execute() {
+
+    	while rs.%Next() {
+
+	 		s code = rs.Name
+	 		//w code,!
+	 		if ( 'generated && $$$isGenerated( code ) ) continue
+	 		if ( 'percent && $$$isPercented( code ) ) continue
+			if ( 'mapped && $$$isMapped( code ) ) continue
+			//if ( '$find( code, mask ) ) continue
+			if '..pkgmatch( masks, code ) continue
+			
+			s filename = ..filename( code )
+			$$$mkdir( filename )
+			//$$$log
+			$$$export( code, filename )
+
+	    } s rs=""
+	}
+
+
+	#; dfi
+	do ..fixDashIntoName()
+	#define export(%code,%file) s sc = ##class(%DeepSee.UserLibrary.Utils).%Export( %code, %file, 0 ) 
+	
+	s sql = "Select id, fullName as Name, documentName From %DeepSee_UserLibrary.FolderItem"
+    s rs = ##class(%SQL.Statement).%ExecDirect( .stm, sql )
+    while rs.%Next() {
+		set code = rs.Name
+		set filename = ..filename( code_".dfi" )
+		set documentName = rs.documentName
+		
+		//if ( '$find($zcvt(documentName,"l"), mask ) ) continue
+		if '..pkgmatch( masks, $zcvt(documentName,"l") ) continue
+		if ($L(code,"$TRASH")>1) continue
+		$$$mkdir( filename )
+		
+		if dfi{
+			//$$$log
+			$$$export( code, filename)
+		}
+		elseif ('dfi){
+			set documentName = $replace(documentName,"/","-")
+			set filename = $extract(filename,1,*-4)
+			do ..fixXMLLine(documentName,filename_".xml")
+		}
+
+	} s rs=""
+	
+	w !,!, "#; Exported to ", ..workdir()
+	
+    Q 1
+]]></Implementation>
+</Method>
+
+<Method name="import">
+<Description>
+import all from workdir</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[filemask="*.xml;*.cls;*.mac;*.int;*.inc;*.dfi",qspec="cku-d",&err="",recurse=1,&loaded="",verbose=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#define push(%dir) s dirs( $i( dirs ) ) = %dir
+	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
+	#define isDirectory(%type) ( %type = "D" )
+	#define log w !, $piece(filename,..workdir(),2), " " w:sc "Ok" d:'sc $system.OBJ.DisplayError(sc)
+	
+	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
+	if verbose w "#; Importing from ", dir,!
+	d ..setIgnore(.fm)
+	for { $$$next(i,dir) Q:i=""  Q:dir=""
+
+		s rs = ##class(%File).FileSetFunc( dir, filemask, , 1 )
+
+		while rs.%Next() {
+			s filename = rs.Name
+
+			if $$$isDirectory(rs.Type) {
+				if recurse $$$push(filename)
+				continue
+			}
+			// check file filter
+			if ..inFilter(.fm,filename) continue
+
+			s ext = $zcvt($p( filename, ".", * ),"l")
+
+			if (ext = "dfi") {
+				s sc = ##class(%DeepSee.UserLibrary.Utils).%Import( filename, 1, 0, 0, "", .dsloaded )
+
+			} else {
+				// load classes only
+				s sc = $system.OBJ.Load( filename, "k-d", .err, .loaded)
+			}
+
+			if verbose $$$log
+			
+	    }
+		// compile all the loaded classes to obey dependencies
+		s sc=$system.OBJ.CompileList( .loaded, "cukbr-d/multicompile",.err )
+		
+	}
+	
+	if verbose {
+	
+		if $D(err) {
+			s i=$Order(err("")) 
+			while i'="" {
+			w !,err(i)
+			s i=$O(err(i))
+			}
+		}
+		
+		w !,!,"#; Imported from ", ..workdir()
+		}
+	Q sc
+]]></Implementation>
+</Method>
+
+<Method name="patch">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>filename="",commitFrom="",commitTo=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	s gln = ..gln()
+	s git = @gln@("git")
+
+	set:commitTo="" commitTo=1
+	if (git = 0) {
+		set:(commitFrom="")||(commitFrom=1) commitFrom=0
+		set sc = ##class(sc.diff.gitLocal).buildDiff(..workdir(), "HEAD~"_commitTo, "HEAD~"_commitFrom, .items)
+		return:$$$ISERR(sc) sc
+	}elseif(git = 1) {
+		set owner = @gln@("owner")
+		set repository = @gln@("repository")
+		set user = @gln@("user")
+		set password = @gln@("password")
+		set:commitFrom="" commitFrom=1
+		
+		set sc = ##class(sc.diff.gitHub).Get(.items, owner, repository, user, password, commitFrom, commitTo)
+		return:$$$ISERR(sc) sc	
+	}
+	
+	if (filename="") {
+		set filename=$G(@gln@("projectName"),"patch")
+		set filename=filename_$p($zdt($h,8)," ")_$tr($p($p($zdt($h)," ",2),":",1,2),":")_".xml"	
+	}
+	zw filename
+	set sc = $system.OBJ.Export(.items,filename)
+	
+	return sc
+]]></Implementation>
+</Method>
+
+<Method name="fixXMLLine">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>documentName,filename</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set stream = ##class(%Stream.FileBinary).%New()
+	do stream.LinkToFile(filename)
+	do $system.OBJ.ExportToStream(documentName, .stream)
+
+	set matcher=##class(%Regex.Matcher).%New("<Export generator=.+>")
+	set matcher.Text = stream.Read(stream.Size)
+	set data = matcher.ReplaceFirst("<Export generator=""Cache"">")
+	
+	do stream.Clear()
+	do stream.Write(data)
+	return stream.%Save()
+]]></Implementation>
+</Method>
+
+<Method name="inFilter">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&filtermask,filename]]></FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	s result=0
+	for 
+	{
+		if '$d(filtermask($I(i))) quit
+		set filter=$piece(filtermask(i),"*")
+		if $length(filename,filter)>1 set result=1
+	}
+
+	quit result
+]]></Implementation>
+</Method>
+
+<Method name="setIgnore">
+<Description>
+get the filtermask for the repository.
+looks for .gitignore file and applies all the lines to filters</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&filtermask]]></FormalSpec>
+<Implementation><![CDATA[
+	
+	// working with .gitignore file
+	// gitignore consists of masks of filtering files
+	s filename=..workdir()_"/.gitignore"
+	if '##class(%File).Exists(filename) quit
+	s file=##class(%File).%New(filename)
+	s sc=file.Open("R")
+	if 'sc 
+	{
+		if verbose d $System.OBJ.DisplayError(sc) return
+	}
+
+	While 'file.AtEnd
+	{
+		s filtermask($I(filtermask))=file.ReadLine()
+	}
+	quit
+]]></Implementation>
+</Method>
+
+<Method name="srcdir">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>srcdir</FormalSpec>
+<Implementation><![CDATA[
+	s gln = ..gln("srcdir") 
+	s:$d(srcdir) @gln = "src"
+	///src - directory by default
+	Q $g(@gln, "src")
+]]></Implementation>
+</Method>
+
+<Method name="projectdir">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>projectdir</FormalSpec>
+<Implementation><![CDATA[
+	s gln = ..gln("projectdir") 
+	s:$d(projectdir) @gln = projectdir
+	///zu(12) namespace directory by default
+	#define nsdir $zu(12,"")
+	Q $g(@gln, $$$nsdir)
+]]></Implementation>
+</Method>
+
+<Method name="workdir">
+<Description>
+get or set working directory for export/import source</Description>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	s src = ..srcdir()
+	s prj = ..projectdir()
+	s:'($e(prj,*)="/") prj = prj_"/"
+	Q ##class(%File).NormalizeFilename(prj_src)
+]]></Implementation>
+</Method>
+
+<Method name="gln">
+<Description>
+gl[obal] n[ame] - storage for settings</Description>
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec>param</FormalSpec>
+<Private>1</Private>
+<Implementation><![CDATA["^"_$classname()_"("""_param_""")"
+]]></Implementation>
+</Method>
+
+<Method name="init">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>confile="isc.json"</FormalSpec>
+<Implementation><![CDATA[
+	set stream=##class(%Stream.FileCharacter).%New()
+	set sc=stream.LinkToFile(..workdir()_"/"_confile)
+	s conf={}.%FromJSON(stream.Read($$$MaxCacheInt))
+	
+	s gln=..gln()
+	
+	s @gln@("compileList")=conf.compileList
+	s @gln@("projectName")=conf.projectName
+	s @gln@("owner")=conf.owner
+	s @gln@("repository")=conf.repository
+	s @gln@("user")=conf.user
+	s @gln@("password")=conf.password
+	s @gln@("git")=conf.git
+	
+	w "compileList="_conf.compileList,!
+	w "projectName="_conf.projectName,!
+	w "owner="_conf.owner,!
+	w "repository="_conf.repository,!
+	w "user="_conf.user,!
+	w "password="_conf.password,!
+	w "git="_conf.git,!
+	
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="release">
+<Description>
+export release file for list and project settings</Description>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	s gln=..gln()
+	s list=$G(@gln@("compileList"))
+	if list="" w "Nothing to release. Run init method first" quit
+
+	s release=$G(@gln@("projectName"),"release")
+	s release=release_$p($zdt($h,8)," ")_$tr($p($p($zdt($h)," ",2),":",1,2),":")_".xml"
+	D $System.OBJ.Export(list,release)
+	w "All objects with mask "_list_" has been exported to "_release
+]]></Implementation>
+</Method>
+
+<Method name="compile">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	s gln=..gln()
+	s list=$G(@gln@("compileList"))
+	if list="" w "Nothing to compile. Run init method first" quit
+	d $System.OBJ.compile(list)
+]]></Implementation>
+</Method>
+
+<Method name="filename">
+<Description><![CDATA[
+test.dfi -> /dfi/test.dfi
+test.cls -> /cls/test.cls
+testpkg.test.cls -> /cls/testpkg/test.cls
+etc]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>code</FormalSpec>
+<Implementation><![CDATA[
+	#define log(%dir,%sc) w !, "mkdir ", %dir, " ", sc
+
+	s wd = ..workdir()
+
+	if '##class(%File).DirectoryExists( wd ) {
+		s sc = ##class(%File).CreateDirectoryChain( wd )
+		$$$log(wd,sc)
+	}
+
+	s ext = $p( code, ".", * ), ext = $zcvt( ext, "l" )
+	//#; for each type - different directory
+    //
+	//s:ext'="" wd = ##class(%File).NormalizeDirectory( ext, wd )
+
+	#; directory must exist before any call (%File).NormalizeFilename( , wd)
+	if '##class(%File).DirectoryExists( wd ) {
+		s sc = ##class(%File).CreateDirectoryChain( wd )
+		$$$log(wd,sc)
+	}
+
+	s filename = ##class(%File).NormalizeFilename( code, wd )
+	#; lowercase file extension
+	s $p(filename,".",*)=ext
+	//B:code="DPRep.Rest.JSON.cls" "L"
+	#; for *.cls and *.mac Package.Subpackage.ClassName.cls -> Folder/Subfolder/ClassName.cls
+	if ( (ext="cls") || (ext="mac")) {
+		s dirs = $piece( code, ".",1, *-2 ), dirs = $translate( dirs, ".", "/" )
+		s relpath = dirs _ "/" _ $piece( code, ".", *-1, * ) ;
+		s filename = ##class(%File).NormalizeFilename( relpath, wd )
+	}
+	Q filename
+]]></Implementation>
+</Method>
+
+<Method name="importUpdated">
+<Description>
+import from workdir all files with ts newer than code ts in db</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[filemask="*.*",qspec="cku-d",&err="",recurse=1,&loaded="",verbose=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#define push(%dir) s dirs( $i( dirs ) ) = %dir
+	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
+	#define isDirectory(%type) ( %type = "D" )
+	#define log w !, $piece(filename,..workdir(),2)," " w:sc "Ok" d:'sc $system.OBJ.DisplayError( sc )
+
+	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
+	if verbose w "#; Importing updated from ", dir,!
+	d ..setIgnore(.fm)
+	for { $$$next(i,dir) Q:i=""  Q:dir=""
+
+		s rs = ##class(%File).FileSetFunc( dir, filemask, , 1 )
+
+		while rs.%Next() {
+		   s filename = rs.Name
+
+		   if $$$isDirectory( rs.Type ) {
+			 if ( recurse ) $$$push(filename) ;push directory
+			 continue
+		   }
+
+			// check file filter
+			if ..inFilter(.fm,filename) continue
+
+		   s filets = rs.DateModified
+		   s codename = ..codename( filename, .ext )
+		   s codets = ..codets( codename, ext )
+		   
+		   #; w !, filename, $c(9), "(", filets, ")"
+		   #; w !, codename, $c(9), "(", codets, ")"
+		   
+		   if ( filets '] codets ) continue
+			 
+		   if (ext = "dfi"){
+				s sc = ##class(%DeepSee.UserLibrary.Utils).%Import( filename, 1, 0, 0, "", .dsloaded )
+		   } else {
+
+			   #; drop existing code before import ( purge DateModified )
+			   #; s:codets'="" sc = ##class(%RoutineMgr).Delete( codename )
+			   k err s sc = $system.OBJ.Load( filename, qspec, .err, .loaded)
+
+		   }
+
+		   if verbose $$$log
+	    }
+	}
+	w:verbose !,"#; Imported updated from ", ..workdir()
+	Q sc
+]]></Implementation>
+</Method>
+
+<Method name="codename">
+<Description>
+presumable codename</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[filename,&ext=""]]></FormalSpec>
+<Implementation><![CDATA[
+	s ext = $p( filename, ".", * ), ext = $zcvt( ext, "l" )
+	s path = ##class(%File).NormalizeDirectory( ext, ..workdir() )
+	s codename = $p( filename, path, 2 )
+	if ext = "dfi" {
+		s fullname  = $tr( codename, "\", "/" ) ; return fullname for dfi in $$$IsWINDOWS
+		Q $p( fullname, ".", 1, *-1 ) ;remove extension
+	}
+	if (ext ="cls")!(ext="int")!(ext="inc")!(ext="mac") s codename=$tr(codename,"\/","..")
+	Q codename
+]]></Implementation>
+</Method>
+
+<Method name="codets">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>codename,ext</FormalSpec>
+<Implementation><![CDATA[
+	s ts = ""
+	if ext'="dfi" {
+		s ts = ##class(%RoutineMgr).TS( codename )
+	} else {
+		s sql="Select timeModified From %DeepSee_UserLibrary.FolderItem Where fullname = ?"
+		s rs = ##class(%SQL.Statement).%ExecDirect( , sql, codename )
+		if rs.%Next() {
+			s utcts = rs.timeModified
+			s utch = $zdth( utcts, 3, , 3 ) ;utc internal format
+			s loch = $zdth( utch, -3 ) ; utc to local timezone
+			s ts = $zdt( loch, 3, ,0 ) ; local timestamp*/
+		}
+	}
+	Q $p( ts, "." ) ;remove ms
+]]></Implementation>
+</Method>
+
+<UDLText name="T">
+<Content><![CDATA[
+// fix "-" into dfi files
+
+]]></Content>
+</UDLText>
+
+<Method name="fixDashIntoName">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	s sql = "Select id, fullName as Name, documentName From %DeepSee_UserLibrary.FolderItem"
+    s rs = ##class(%SQL.Statement).%ExecDirect( .stm, sql )
+    while rs.%Next() {
+		if $find(rs.Name, "-"){
+			w rs.Name," -> "
+			set item = ##class(%DeepSee.UserLibrary.FolderItem).%OpenId(rs.id)
+			set item.name = $replace(item.name,"-"," ")
+			w item.name,!
+			do item.%Save()
+		}
+    }
+    k rs
+]]></Implementation>
+</Method>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DataLocation>^CTRL.CodeD</DataLocation>
+<DefaultData>CodeDefaultData</DefaultData>
+<IdLocation>^CTRL.CodeD</IdLocation>
+<IndexLocation>^CTRL.CodeI</IndexLocation>
+<StreamLocation>^CTRL.CodeS</StreamLocation>
+<Data name="CodeDefaultData">
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+
+
+<Class name="CTRL.GITClient">
+<Super>%RegisteredObject</Super>
+<TimeChanged>65618,81540.58358</TimeChanged>
+<TimeCreated>65618,50928.361331</TimeCreated>
+
+<Parameter name="SRCDIRNAME">
+<Description>
+Name of the subdir that will hold Caché files in Git workdir</Description>
+<Default>src/</Default>
+</Parameter>
+
+<Property name="Logger">
+<Description>
+Logger instance to display messages</Description>
+<Type>CTRL.Logger</Type>
+</Property>
+
+<Property name="GitPath">
+<Description>
+Path to GIT binaries (with trailing slash)</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN"/>
+</Property>
+
+<Property name="WorkDir">
+<Description>
+Path to GIT work dir (with trailing slash)</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN"/>
+</Property>
+
+<Property name="HomeDir">
+<Description>
+HOME path (Unix only). The value will be set as $HOME before executing git commands.</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN"/>
+</Property>
+
+<Property name="AuthorName">
+<Description>
+Git Author name (used in commits). If set, it will be used in the GIT_AUTHOR_EMAIL env. variable</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="1024"/>
+</Property>
+
+<Property name="AuthorEmail">
+<Description>
+Git Author email (used in commits). If set, it will be used in the GIT_AUTHOR_EMAIL env. variable</Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="1024"/>
+</Property>
+
+<Property name="CacheDir">
+<Description>
+Path to Cache files in GIT work dir (with trailing slash)</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="ErrorFile">
+<Description>
+Temporary file to store errors from commands</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="OutputFile">
+<Description>
+Temporary file to store output from commands</Description>
+<Type>%String</Type>
+</Property>
+
+<Property name="GitRepository">
+<Description>
+Path to the Git Repository for this User/Namespace</Description>
+<Type>%String</Type>
+</Property>
+
+<Method name="%OnNew">
+<Description>
+
+Constructor. Initializations</Description>
+<FormalSpec>pGitPath:%String,pWorkDir:%String,pHomeDir:%String,pAuthorName:%String,pAuthorEmail:%String,pOutput:%String,pError:%String,pGitRepo:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+    if ((pWorkDir="")||(pOutput="")||(pError="")) {
+	    $$$ThrowStatus($$$ERROR($$$GeneralError,"WorkDir, OutputFile or ErrorFile is set to null"))
+    }
+	set ..GitRepository=pGitRepo
+    set ..GitPath = pGitPath
+    set ..WorkDir = pWorkDir
+    set ..HomeDir = pHomeDir
+    set ..AuthorName = pAuthorName
+    set ..AuthorEmail = pAuthorEmail
+    set ..CacheDir = pWorkDir_..#SRCDIRNAME
+    set ..OutputFile = pOutput
+    set ..ErrorFile = pError
+    set ..Logger = ##class(CTRL.Logger).%New()
+    
+    quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="Clone">
+<Description>
+
+git clone</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git clone "_..GitRepository, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Add">
+<Description>
+
+git add</Description>
+<FormalSpec><![CDATA[pFile:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if pFile'="" {
+		quit ..RunCmd("git add """_pFile_"""", .pOutput, pLog)
+	} else {
+		quit ..RunCmd("git add --all", .pOutput, pLog)
+
+	}
+]]></Implementation>
+</Method>
+
+<Method name="Commit">
+<Description>
+
+git commit</Description>
+<FormalSpec><![CDATA[pFile:%String,pMsg:%String,&pOutput,pAmend:%Boolean=0,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set opts="-a"
+	set:pAmend opts=opts_" --amend"
+	quit ..RunCmd("git commit "_opts_" -m """_pMsg_"""", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Status">
+<Description>
+
+git status</Description>
+<FormalSpec><![CDATA[pFile:%String,&statuscode:%String,&statusdesc:%String,&pOutput,pLog:%Boolean=1,pPorcelain:%Boolean=0]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set (ret,statuscode,statusdesc)=""
+	
+	if pFile'="" {
+		set ret = ..RunCmd("git status -s """_pFile_"""", .pOutput, pLog)
+		if $data(pOutput(1)) {
+			set line=$zstrip(pOutput(1),"<W")
+			set s=$extract(line,0,1)
+			set statuscode=s
+			set statusdesc=$case(s,
+				"?":"untracked",
+				"M":"updated in index",
+				"A":"added to index",
+				"D":"deleted from index",
+				"R":"renamed in index",
+				"C":"copied in index",
+				"!":"ignored"
+			)
+		} else {
+			set ret = ..RunCmd("git ls-files -v """_pFile_"""", .pOutput, pLog)
+			if $data(pOutput(1)) {
+				set line=$zstrip(pOutput(1),"<W")
+				set s=$zconvert($extract(line,0,1),"U")
+				if s="H" {
+					set statuscode="H"
+					set statusdesc="Cached"
+				}
+			}
+		} 
+	} else {
+		set opts=""
+		set:pPorcelain opts="--porcelain"
+		set ret = ..RunCmd("git status "_opts, .pOutput, pLog)
+	}
+	
+	quit ret
+]]></Implementation>
+</Method>
+
+<Method name="Checkout">
+<Description>
+
+git checkout</Description>
+<FormalSpec><![CDATA[pFile:%String="",pBranch:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if pFile'="" {
+		quit ..RunCmd("git checkout -- """_pFile_"""", .pOutput, pLog)
+	}
+	else {
+		quit ..RunCmd("git checkout "_pBranch, .pOutput, pLog)
+	}
+]]></Implementation>
+</Method>
+
+<Method name="Log">
+<Description>
+
+git log</Description>
+<FormalSpec><![CDATA[pFile:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set file = ""
+	if pFile'="" set file = ""_pFile_""
+	
+	quit ..RunCmd("git log --pretty=format:""%h %ad | %s%d [%an]"" --graph --date=short --max-count=20 "_file, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Reset">
+<Description>
+
+git reset</Description>
+<FormalSpec><![CDATA[pFile:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git reset HEAD """_pFile_"""", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Branch">
+<Description>
+
+git branch</Description>
+<FormalSpec><![CDATA[pBranch:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	if pBranch="" {
+		quit ..RunCmd("git branch", .pOutput, pLog)
+	}
+	quit ..RunCmd("git branch """_pBranch_"""", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="ListConfig">
+<Description>
+
+git config --list</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git config --list", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="GetCurrentBranch">
+<Description>
+
+Returns a string with the name of the current branch</Description>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[
+	set result=""
+	set tSC=..CurrentBranch(.output,0)
+	if $$$ISOK(tSC) set result=output(1)
+	quit result
+]]></Implementation>
+</Method>
+
+<Method name="CurrentBranch">
+<Description>
+
+current branch</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git rev-parse --symbolic-full-name --abbrev-ref HEAD", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="DiffStatus">
+<Description>
+
+git diff --name-status: useful to know what changes (status) have been done to files</Description>
+<FormalSpec><![CDATA[pBranch:%String="",pReverse:%Boolean=1,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set current = ..GetCurrentBranch()
+	set opts="--name-status"
+	set:pReverse opts=opts_" -R"
+	quit ..RunCmd("git diff "_opts_" "_pBranch, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="DiffStat">
+<Description>
+
+git diff --stat: useful to report statistics about changes</Description>
+<FormalSpec><![CDATA[pBranch:%String="",pReverse:%Boolean=1,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set current = ..GetCurrentBranch()
+	set opts="--stat"
+	set:pReverse opts=opts_" -R"
+	quit ..RunCmd("git diff "_opts_" "_pBranch, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Diff">
+<Description>
+
+git diff: simple changes made in a file</Description>
+<FormalSpec><![CDATA[pFile:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set opts="--patience"
+	quit ..RunCmd("git diff "_opts_" "_pFile, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Push">
+<Description>
+
+git push</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git push "_..GitRepository_" --all", .pOutput, pLog, 1)
+]]></Implementation>
+</Method>
+
+<Method name="Pull">
+<Description>
+
+git pull</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git pull", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="RemoteUpdate">
+<Description>
+
+git remote update group</Description>
+<FormalSpec><![CDATA[pGroup:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git remote update "_pGroup, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="Merge">
+<Description>
+
+git merge</Description>
+<FormalSpec><![CDATA[pBranch:%String,pAbort:%Boolean=0,&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set opts="--no-commit --no-ff"
+	set:pAbort opts="--abort"
+	quit ..RunCmd("git merge "_opts_" "_pBranch, .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="LsFiles">
+<Description>
+
+git ls-files</Description>
+<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	quit ..RunCmd("git ls-files --cached -v", .pOutput, pLog)
+]]></Implementation>
+</Method>
+
+<Method name="RunCmd">
+<Description>
+
+Runs a cmd in the OS and returns the output and error</Description>
+<FormalSpec><![CDATA[cmd:%String,&pOutput,pLog:%Boolean=1,pAsync:%Boolean=0]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#define DQUOTE(%arg)	$char(34)_%arg_$char(34)
+	#define ISWINDOWS		($zversion(1)=2)
+	
+	set ret=$$$OK
+	try {
+		set (sc,pOutput)=""
+		set text=cmd
+		
+		if ..GitPath'="" {
+			set exe=$piece(cmd," ")
+			set args=$piece(cmd," ", 2, $l(cmd," "))
+			set cmd=$$$DQUOTE(..GitPath_exe)_" "_args
+		}
+		
+		set cmds=""
+		
+		// WINDOWS
+		if $$$ISWINDOWS {
+			if ..AuthorName'="" set cmds = cmds_$lb("set GIT_AUTHOR_NAME="_$$$DQUOTE(..AuthorName))
+			if ..AuthorEmail'="" set cmds = cmds_$lb("set GIT_AUTHOR_EMAIL="_$$$DQUOTE(..AuthorEmail))
+			if ..AuthorName'="" set cmds = cmds_$lb("set GIT_COMMITTER_NAME="_$$$DQUOTE(..AuthorName))
+			if ..AuthorEmail'="" set cmds = cmds_$lb("set GIT_COMMITTER_EMAIL="_$$$DQUOTE(..AuthorEmail))
+			set cmds = cmds_$lb("set GCM_TRACE=1")
+			set cmds = cmds_$lb("cd /D "_$$$DQUOTE(..WorkDir))
+			set cmds = cmds_$lb(cmd)
+			set cmd = $listtostring(cmds, " & ")
+		}
+		// LINUX 
+		else {
+			set cmds=cmds_$lb("export LD_LIBRARY_PATH=""""")
+			if ..AuthorName'="" set cmds = cmds_$lb("export GIT_AUTHOR_NAME="_$$$DQUOTE(..AuthorName))
+			if ..AuthorEmail'="" set cmds = cmds_$lb("export GIT_AUTHOR_EMAIL="_$$$DQUOTE(..AuthorEmail))
+			if ..AuthorName'="" set cmds = cmds_$lb("export GIT_COMMITTER_NAME="_$$$DQUOTE(..AuthorName))
+			if ..AuthorEmail'="" set cmds = cmds_$lb("export GIT_COMMITTER_EMAIL="_$$$DQUOTE(..AuthorEmail))
+			if ..HomeDir'="" set cmds = cmds_$lb("export HOME="_$$$DQUOTE(..HomeDir))
+			set cmds = cmds_$lb("if [ ! -d "_$$$DQUOTE(..WorkDir)_" ]; then mkdir -p "_$$$DQUOTE(..WorkDir)_"; fi")
+			set cmds = cmds_$lb("cd "_$$$DQUOTE(..WorkDir))
+			set cmds = cmds_$lb("env > /tmp/myenv.txt")
+			//set cmds = cmds_$lb("echo $PATH > /tmp/mypath.txt")
+			set cmds = cmds_$lb("whoami > /tmp/whoami.txt")
+			set cmds = cmds_$lb(cmd)
+			set cmd = $listtostring(cmds, " && ")
+		}
+	
+		set stdout = "/STDOUT="""_..OutputFile_""""
+		set stderr = "/STDERR="""_..ErrorFile_""""
+		set logit = ""
+		set async = ""
+		set stdin = ""
+		
+		set:(pLog) logit=" /LOGCMD"
+		//set:(pAsync) async=" /ASYNC"
+		//set:(pAsync) 
+
+		set flags = "/SHELL /NOQUOTE "_stdout_" "_stderr_logit_async_stdin
+		//  
+		//do:(pLog) ..Logger.Info($c(13)_">"_text)
+		//do ..Logger.Debug(cmd)
+		//do ..Logger.Debug(flags)
+
+		// $zf(-1) is deprecated - replaced with $zf(-100)
+		//set rc=$zf(-1,cmd_" 2> """_..ErrorFile_""" > """_..OutputFile_"""")
+		set rc=$zf(-100,flags,cmd)
+		//w:(pAsync) !,"--- waiting 30sec..."
+		//HANG:(pAsync) 30
+						
+		set errorstream=##class(%Stream.FileCharacter).%New()
+		set tsc = errorstream.LinkToFile(..ErrorFile)
+
+		set ind=0
+		if errorstream.Size>0 {		
+			while 'errorstream.AtEnd {
+				set errorLine=errorstream.ReadLine()
+				do ..Logger.Debug(errorLine)
+				set ind=ind+1
+				set pOutput(ind)=errorLine
+			}
+		}
+		do errorstream.Clear()
+		kill errorstream
+		
+		set outputstream=##class(%Stream.FileCharacter).%New()
+		set tsc = outputstream.LinkToFile(..OutputFile)
+	
+		if outputstream.Size>0 {
+			while 'outputstream.AtEnd {
+				set outputLine=outputstream.ReadLine()
+				do ..Logger.Debug(outputLine)
+				set ind=ind+1
+				set pOutput(ind)=outputLine
+			}
+		}
+		do outputstream.Clear()
+		kill outputstream
+		
+	} catch errObj {
+		set ret=errObj.AsStatus()
+	}
+		
+	quit ret
+]]></Implementation>
+</Method>
+
+<Method name="testme">
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	
+	Set gitpath="C:\GIT\bin\"
+	Set wrkdir="C:\DEV\SrcCtrl"
+	Set homedir=""
+	Set pAuthName="PeteOH"
+	Set pAuthEmail="peteohalloran@gmail.com"
+	Set pout=wrkdir_"\git.out"
+	Set perr=wrkdir_"\git.err"
+	Set gitrepo="https://PeteOH:Bluesky!GH1@github.com/peteoh/srcctrl.git"
+	
+	#dim git As CTRL.GITClient
+	 
+	Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,homedir,pAuthName,pAuthEmail,pout,perr,gitrepo)
+
+	set sout = ""
+	
+	Do git.Add("",.sout,1)
+
+	w sout
+
+	Do git.Commit("","testing",.sout)
+
+	w sout
+	
+	Do git.Push(.sout)
+
+	w sout
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Class name="CTRL.Installer">
+<Super>%Projection.AbstractProjection</Super>
+<TimeChanged>65619,36964.895519</TimeChanged>
+<TimeCreated>65619,35827.25363</TimeCreated>
+
+<Projection name="Reference">
+<Type>Installer</Type>
+</Projection>
+
+<Parameter name="VERSION">
+<Default>1.0.0</Default>
+</Parameter>
+
+<Parameter name="iscProductVersion">
+<Description>
+In older Cache versions, method "GetISCProduct" does not exist</Description>
+<Expression>$case(
+        ##class(%Dictionary.CompiledMethod).IDKEYExists("%SYSTEM.Version", "GetISCProduct"),
+        1: $CLASSMETHOD("%SYSTEM.Version", "GetISCProduct"),
+        : 2
+    )</Expression>
+</Parameter>
+
+<Method name="CreateProjection">
+<Description>
+This method is invoked when a class is compiled.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[cls:%String,&params]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+
+	new $Namespace
+	set ns = $Namespace // ought to be package home namespace!
+	set st = $$$OK
+	
+    write !, "Installing CTRL application to " _ ns
+
+    do ..CreateAllNamespace()
+    
+    write !, "Mapping CTRL package into all namespaces:"
+    set st = ..Map(ns)
+    if ($$$ISERR(st)) {
+        write !, "ERROR: CTRL package was not mapped into %ALL namespace !!!."
+    } else {
+	    write !, "CTRL package successfully mapped into all namespaces."
+    }
+    
+    return st
+]]></Implementation>
+</Method>
+
+<Method name="RemoveProjection">
+<Description>
+This method is invoked when a class is 'uncompiled'.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[cls:%String,&params,recompile:%Boolean]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+
+	set st = $$$OK
+	
+	new $Namespace
+
+	write:(recompile) !, "Recompiling CTRL, skipping the deletion..."
+    return:(recompile) $$$OK
+
+	set ns = $get(^WebTerminal("HomeNamespace"), $Namespace)
+    write !, "Uninstalling CTRL application from ", ns
+    zn "%SYS"
+
+    write !, "Unmapping CTRL package from all namespaces:"
+	set st = ..UnMap(ns)
+    if ($$$ISERR(st)) {
+	    write !, "Unmapping failed."
+    } else {
+	    write !, "Unmapping complete."
+    }
+
+    return st
+]]></Implementation>
+</Method>
+
+<Method name="CreateAllNamespace">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+
+	new $Namespace
+    set $Namespace = "%SYS"
+	set ns = "%All"
+    set st = $$$OK
+
+	if ('##Class(Config.Namespaces).Exists(ns)) {
+
+        set dbPrefix = $case(..#iscProductVersion >= 4, 1: "IRIS", : "CACHE")
+        set Properties("Globals") = dbPrefix _ "TEMP"
+        set Properties("Library") = dbPrefix _ "LIB"
+        set Properties("Routines") = dbPrefix _ "TEMP"
+        set Properties("SysGlobals") = dbPrefix _ "SYS"
+        set Properties("SysRoutines") = dbPrefix _ "SYS"
+        set Properties("TempGlobals") = dbPrefix _ "TEMP"
+		
+		set st = ##Class(Config.Namespaces).Create(ns, .Properties)
+		if ($$$ISERR(st)) {
+        	do $System.Status.DisplayError(st)
+    	} else {
+        	write !, "%All namespace is created."
+        }
+
+    }
+
+    return st
+]]></Implementation>
+</Method>
+
+<Method name="Map">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fromNS=""</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	new $Namespace
+    set $Namespace = "%SYS"
+    set st = $$$OK
+
+    set mapTo = $LISTBUILD("%All")
+    do ##Class(Config.Namespaces).Get(fromNS, .InstallNSProps)
+    set Properties("Database") = $get(InstallNSProps("Routines"))
+    set ptr = 0
+    while $LISTNEXT(mapTo, ptr, namespace) {
+        continue:(fromNS = namespace)
+        continue:('##Class(Config.Namespaces).Exists(namespace))
+        write " ", namespace
+        if ('##Class(Config.MapPackages).Exists(namespace, "CTRL")) {
+        	set st1 = ##Class(Config.MapPackages).Create(namespace, "CTRL", .Properties)
+        }
+        if ('##Class(Config.MapRoutines).Exists(namespace, "CTRLCheckin.mac")) {
+	        set st2 = ##Class(Config.MapRoutines).Create(namespace, "CTRL.Checkin.mac", .Properties)
+        }
+        set st = $$$ADDSC(st,$$$ADDSC($get(st1,$$$OK),$get(st2,$$$OK)))
+    }
+    return st
+]]></Implementation>
+</Method>
+
+<Method name="UnMap">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>fromNS:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	new $Namespace
+    set $Namespace = "%SYS"
+    set st = $$$OK
+    
+	set mapTo = $LISTBUILD("%All")
+    set ptr = 0
+    while $LISTNEXT(mapTo, ptr, namespace) {
+	    continue:(fromNS = namespace)
+	    continue:('##Class(Config.Namespaces).Exists(namespace))
+        write " ", namespace
+        if (##Class(Config.MapPackages).Exists(namespace, "CTRL")) {
+        	set st1 = ##Class(Config.MapPackages).Delete(namespace, "CTRL", .Properties)
+        }
+        if (##Class(Config.MapRoutines).Exists(namespace, "CTRLCheckin.mac")) {
+	        set st2 = ##Class(Config.MapRoutines).Delete(namespace, "CTRL.Checkin.mac", .Properties)
+        }
+        set st = $$$ADDSC(st,$$$ADDSC($get(st1,$$$OK),$get(st2,$$$OK)))
+    }
+    return st
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Class name="CTRL.Logger">
+<Super>%RegisteredObject</Super>
+<TimeChanged>65618,81593.219399</TimeChanged>
+<TimeCreated>65618,50902.967849</TimeCreated>
+
+<Parameter name="LOGLEVEL">
+<Description>
+Current log level</Description>
+<Default>2</Default>
+</Parameter>
+
+<Parameter name="DEBUG">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="INFO">
+<Default>2</Default>
+</Parameter>
+
+<Parameter name="ERROR">
+<Default>7</Default>
+</Parameter>
+
+<Method name="Log">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pLevel:%String,pMsg:%String,pNL:%Boolean=1</FormalSpec>
+<Implementation><![CDATA[
+	if pLevel >= ..#LOGLEVEL {
+		write:pNL !
+		write pMsg
+	}
+	quit
+]]></Implementation>
+</Method>
+
+<Method name="Debug">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pMsg:%String,pNL:%Boolean=1</FormalSpec>
+<Implementation><![CDATA[	do ..Log(..#DEBUG, pMsg, pNL)
+]]></Implementation>
+</Method>
+
+<Method name="Error">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pMsg:%String,pNL:%Boolean=1</FormalSpec>
+<Implementation><![CDATA[	do ..Log(..#ERROR, pMsg, pNL)
+]]></Implementation>
+</Method>
+
+<Method name="Info">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pMsg:%String,pNL:%Boolean=1</FormalSpec>
+<Implementation><![CDATA[	do ..Log(..#INFO, pMsg, pNL)
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Project name="CTRL" LastModified="2020-08-28 10:17:16.305495">
+  <Items>
+    <ProjectItem name="CTRL.Checkin.MAC" type="MAC"></ProjectItem>
+    <ProjectItem name="CTRL.Code" type="CLS"></ProjectItem>
+    <ProjectItem name="CTRL.GITClient" type="CLS"></ProjectItem>
+    <ProjectItem name="CTRL.Installer" type="CLS"></ProjectItem>
+    <ProjectItem name="CTRL.Logger" type="CLS"></ProjectItem>
+  </Items>
+  <BreakPoints>
+    <BreakPoint Routine="CTRL.Code.CLS" Offset="export+2"></BreakPoint>
+    <BreakPoint Routine="CTRL.Code.CLS" Offset="pkgmatch+4"></BreakPoint>
+    <BreakPoint Routine="CTRL.GITClient.CLS" Offset="testme+2"></BreakPoint>
+  </BreakPoints>
+</Project>
+</Export>
