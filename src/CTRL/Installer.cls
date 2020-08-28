@@ -109,7 +109,7 @@ ClassMethod Map(fromNS = "") As %Status
         	set st1 = ##Class(Config.MapPackages).Create(namespace, "CTRL", .Properties)
         }
         if ('##Class(Config.MapRoutines).Exists(namespace, "CTRLCheckin.mac")) {
-	        set st2 = ##Class(Config.MapRoutines).Create(namespace, "CTRLCheckin.mac", .Properties)
+	        set st2 = ##Class(Config.MapRoutines).Create(namespace, "CTRL.Checkin.mac", .Properties)
         }
         set st = $$$ADDSC(st,$$$ADDSC($get(st1,$$$OK),$get(st2,$$$OK)))
     }
@@ -132,7 +132,7 @@ ClassMethod UnMap(fromNS As %String) As %Status
         	set st1 = ##Class(Config.MapPackages).Delete(namespace, "CTRL", .Properties)
         }
         if (##Class(Config.MapRoutines).Exists(namespace, "CTRLCheckin.mac")) {
-	        set st2 = ##Class(Config.MapRoutines).Delete(namespace, "CTRLCheckin.mac", .Properties)
+	        set st2 = ##Class(Config.MapRoutines).Delete(namespace, "CTRL.Checkin.mac", .Properties)
         }
         set st = $$$ADDSC(st,$$$ADDSC($get(st1,$$$OK),$get(st2,$$$OK)))
     }

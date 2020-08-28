@@ -1,0 +1,103 @@
+ROUTINE CTRL.Checkin
+Checkin ; execute github add,commit and push
+
+	s defgitrepo=""
+	s defprojectdir=""
+	s defgitpath=""
+		
+	s:($D(^CTRL.Code("gitrepo"))) defgitrepo=^CTRL.Code("gitrepo")  // "https://github.com/peteoh/srcctrl.git"
+	s:($D(^CTRL.Code("projectdir"))) defprojectdir=^CTRL.Code("projectdir") //"C:\DEV\srcctrl"
+	s:($D(^CTRL.Code("gitpath"))) defgitpath=^CTRL.Code("gitpath") // "C:\Git\Bin"
+
+	w !, "This routine will export code from this namespace and push to github"
+	r !, "Are you sure (Y/n)?", cont
+    w !
+    
+	if ((cont = "Y") || (cont = "y") || (cont = "")) {
+		w !, "GIT path ("_defgitpath_"):"  r gitpath
+		w !, "GIT repo ("_defgitrepo_"):"  r gitrepo
+		w !, "Local Dir ("_defprojectdir_"):"  r projectdir	
+	
+		// if values are set then save to globals
+		s:(gitpath'="") ^CTRL.Code("gitpath")=gitpath		
+		s:(gitrepo'="") ^CTRL.Code("gitrepo")=gitrepo		
+		s:(projectdir'="") ^CTRL.Code("projectdir")=projectdir
+
+		// if values are not set then get the default values (from globals)
+		s:(gitpath="") gitpath = defgitpath
+		s:(gitrepo="") gitrepo = defgitrepo
+		s:(projectdir="") projectdir = defprojectdir
+
+		if ( (gitrepo'="") && (projectdir'="") && (gitpath'="") ) {
+
+			r !, "Enter GIT Username:", user
+			
+			if (user'="")
+			{
+				write !,"Enter GIT Password: "
+				use 0:(:/echo=0)  
+				set pass=""
+	    		for  read *c quit:c=13  set pass=pass_$c(c) write "*"
+	    		use 0:(:/echo=1)
+				
+				s userpass = user_":"_pass_"@"
+				
+				s $p(gitrepo,"/",3) = userpass_$p(gitrepo,"/",3)
+			}
+			// w !, gitrepo
+
+			// Export the Code
+			
+			// get last package list	
+			s defpackages=""
+			s:($D(^CTRL.Code("packages"))) defpackages=^CTRL.Code("packages")  // "PKG,PKG.SUBPKG"
+			s:(defpackages="") defpackages = "ALL"
+			
+			w !, "Export Packages - ALL for all packages ("_defpackages_"):"  r packages	
+
+			// if values are set then save to globals
+			s:(packages'="") ^CTRL.Code("packages")=packages		
+			// if values are not set then get the default values (from globals)
+			s:(packages="") packages = defpackages
+			
+			s:(packages="ALL") packages=""
+
+			do ##Class(CTRL.Code).export(packages)
+			set wrkdir = ##class(CTRL.Code).workdir()
+			Set pout=wrkdir_"\git.out"
+			Set perr=wrkdir_"\git.err"
+			
+			// Now call GitHub add, commit, push
+
+			// Get the Message for the Commit
+			Do
+			{
+				r !,!, "Enter the Git Message for Commit: ", cmtmsg
+			} while (cmtmsg="")	
+
+			w !,!," Updating GIT..."
+
+			Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,"","","",pout,perr,gitrepo)
+
+			set sout = ""
+			
+			Do git.Add("",.sout,1)
+
+			Do git.Commit("",cmtmsg,.sout)
+
+			Do git.Push(.sout)
+
+			w !,!,"FINISHED."
+						
+		} 
+		else
+		{
+			w !, "ERROR: you need to provide the git repo (eg https://github.com/name/repo.git)"
+			W !, "       and git binary folder (eg: c:\git\bin )"
+			W !, "       and local folder (eg: c:\localfolder )"
+		}
+
+	
+	   
+   }  
+

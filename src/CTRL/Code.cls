@@ -375,8 +375,8 @@ ClassMethod filename(code)
 	#; lowercase file extension
 	s $p(filename,".",*)=ext
 	//B:code="DPRep.Rest.JSON.cls" "L"
-	#; for *.cls Package.Subpackage.ClassName.cls -> Folder/Subfolder/ClassName.cls
-	if ext ="cls" {
+	#; for *.cls and *.mac Package.Subpackage.ClassName.cls -> Folder/Subfolder/ClassName.cls
+	if ( (ext="cls") || (ext="mac")) {
 		s dirs = $piece( code, ".",1, *-2 ), dirs = $translate( dirs, ".", "/" )
 		s relpath = dirs _ "/" _ $piece( code, ".", *-1, * ) ;
 		s filename = ##class(%File).NormalizeFilename( relpath, wd )
