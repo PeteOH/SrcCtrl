@@ -11,8 +11,8 @@ In order to use this utility:
 * If the code is not yet in a Git Repository then create an empty repoository first.  
   * On the IRIS server perform a **git clone** to a local folder.  
   * You do not need to store credentials - the routine will prompt for git user and passwd. If you wish to store credentials then you can follow article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a>  
-  * If you wish to only run on a signle Namespace:
-Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance - **SKIP THe Installer.cls**.
+  * If you wish to only run on a single Namespace:
+Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance - **SKIP The Installer.cls**.
 
 ## Routine run export AND Git commit
 
