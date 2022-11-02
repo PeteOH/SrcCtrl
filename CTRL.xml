@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="IRIS" version="26" zv="IRIS for Windows (x86-64) 2020.1 (Build 202U)" ts="2020-08-28 11:03:22">
+<Export generator="IRIS" version="26" zv="IRIS for UNIX (Ubuntu Server LTS for x86-64) 2021.2 (Build 651U)" ts="2022-11-02 22:08:22">
 <Routine name="CTRL.Checkin" type="MAC" languagemode="0" timestamp="65619,36426.232763"><![CDATA[
 Checkin ; execute github add,commit and push
 
@@ -108,7 +108,7 @@ Checkin ; execute github add,commit and push
 
 <Class name="CTRL.Code">
 <Super>%Persistent</Super>
-<TimeChanged>65619,36926.965298</TimeChanged>
+<TimeChanged>66415,79066.09823348</TimeChanged>
 <TimeCreated>65615,77815.24873</TimeCreated>
 
 <Method name="pkgmatch">
@@ -245,15 +245,16 @@ export all available code</Description>
 
 <Method name="import">
 <Description>
-import all from workdir</Description>
+import all from workdir
+"*.xml;*.cls;*.mac;*.int;*.inc;*.dfi",</Description>
 <ClassMethod>1</ClassMethod>
-<FormalSpec><![CDATA[filemask="*.xml;*.cls;*.mac;*.int;*.inc;*.dfi",qspec="cku-d",&err="",recurse=1,&loaded="",verbose=1]]></FormalSpec>
+<FormalSpec><![CDATA[filemask="*.cls;*.mac;*.inc",qspec="cku-d",&err="",recurse=1,&loaded="",verbose=1]]></FormalSpec>
 <ReturnType>%Status</ReturnType>
 <Implementation><![CDATA[
 	#define push(%dir) s dirs( $i( dirs ) ) = %dir
 	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
 	#define isDirectory(%type) ( %type = "D" )
-	#define log w !, $piece(filename,..workdir(),2), " " w:sc "Ok" d:'sc $system.OBJ.DisplayError(sc)
+	#define log w:('sc) !, $piece(filename,..workdir(),2), " " d:('sc) $system.OBJ.DisplayError(sc)
 	
 	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
 	if verbose w "#; Importing from ", dir,!
@@ -285,8 +286,18 @@ import all from workdir</Description>
 			if verbose $$$log
 			
 	    }
+		s flags = "cukbr-d/multicompile"
+		s flags = "cukbr-d"
 		// compile all the loaded classes to obey dependencies
-		s sc=$system.OBJ.CompileList( .loaded, "cukbr-d/multicompile",.err )
+		//if dir = ..workdir()
+		//{
+			s sc=$system.OBJ.CompileList( .loaded, flags,.err )
+		//}
+		//else
+		//{
+		//	set package = $REPLACE($REPLACE(dir,..workdir()_"/",""),"/",".")
+		//	s sc=$system.OBJ.CompilePackage( package, flags,.err )
+		//}
 		
 	}
 	
@@ -559,7 +570,7 @@ import from workdir all files with ts newer than code ts in db</Description>
 	#define push(%dir) s dirs( $i( dirs ) ) = %dir
 	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
 	#define isDirectory(%type) ( %type = "D" )
-	#define log w !, $piece(filename,..workdir(),2)," " w:sc "Ok" d:'sc $system.OBJ.DisplayError( sc )
+	#define log w:('sc) !, $piece(filename,..workdir(),2)," " d:('sc) $system.OBJ.DisplayError( sc )
 
 	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
 	if verbose w "#; Importing updated from ", dir,!
@@ -688,7 +699,7 @@ presumable codename</Description>
 
 <Class name="CTRL.GITClient">
 <Super>%RegisteredObject</Super>
-<TimeChanged>65618,81540.58358</TimeChanged>
+<TimeChanged>66415,18741.511409532</TimeChanged>
 <TimeCreated>65618,50928.361331</TimeCreated>
 
 <Parameter name="SRCDIRNAME">
@@ -791,220 +802,29 @@ Constructor. Initializations</Description>
 <Description>
 
 git clone</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git clone "_..GitRepository, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Add">
-<Description>
-
-git add</Description>
-<FormalSpec><![CDATA[pFile:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
 <ReturnType>%Status</ReturnType>
 <Implementation><![CDATA[
-	if pFile'="" {
-		quit ..RunCmd("git add """_pFile_"""", .pOutput, pLog)
-	} else {
-		quit ..RunCmd("git add --all", .pOutput, pLog)
+	set retval = $$$OK
 
-	}
-]]></Implementation>
-</Method>
-
-<Method name="Commit">
-<Description>
-
-git commit</Description>
-<FormalSpec><![CDATA[pFile:%String,pMsg:%String,&pOutput,pAmend:%Boolean=0,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set opts="-a"
-	set:pAmend opts=opts_" --amend"
-	quit ..RunCmd("git commit "_opts_" -m """_pMsg_"""", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Status">
-<Description>
-
-git status</Description>
-<FormalSpec><![CDATA[pFile:%String,&statuscode:%String,&statusdesc:%String,&pOutput,pLog:%Boolean=1,pPorcelain:%Boolean=0]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set (ret,statuscode,statusdesc)=""
+	set git = $G(^CTRL.Code("gitpath"),"/usr/bin/git")
+	set repo = $G(^CTRL.Code("gitrepo"),"github.com/Buddybet-Group/BuddyBet-IRISv2.0.git")
+	set user = $G(^CTRL.Code("gitusername"),"Buddybetadmin")
+	set token = $G(^CTRL.Code("gittoken"),"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")
+	set prj = $G(^CTRL.Code("projectdir"), "/CoreDatabase/GIT/BuddyBet-IRISv2.0")
 	
-	if pFile'="" {
-		set ret = ..RunCmd("git status -s """_pFile_"""", .pOutput, pLog)
-		if $data(pOutput(1)) {
-			set line=$zstrip(pOutput(1),"<W")
-			set s=$extract(line,0,1)
-			set statuscode=s
-			set statusdesc=$case(s,
-				"?":"untracked",
-				"M":"updated in index",
-				"A":"added to index",
-				"D":"deleted from index",
-				"R":"renamed in index",
-				"C":"copied in index",
-				"!":"ignored"
-			)
-		} else {
-			set ret = ..RunCmd("git ls-files -v """_pFile_"""", .pOutput, pLog)
-			if $data(pOutput(1)) {
-				set line=$zstrip(pOutput(1),"<W")
-				set s=$zconvert($extract(line,0,1),"U")
-				if s="H" {
-					set statuscode="H"
-					set statusdesc="Cached"
-				}
-			}
-		} 
-	} else {
-		set opts=""
-		set:pPorcelain opts="--porcelain"
-		set ret = ..RunCmd("git status "_opts, .pOutput, pLog)
-	}
+	set repo = "https://"_user_":"_token_"@"_repo
+	set flags = "/LOGCMD /SHELL /STDOUT="""_tmp_"/git.out"" /STDERR="""_tmp_"/git.err"" "
 	
-	quit ret
-]]></Implementation>
-</Method>
-
-<Method name="Checkout">
-<Description>
-
-git checkout</Description>
-<FormalSpec><![CDATA[pFile:%String="",pBranch:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	if pFile'="" {
-		quit ..RunCmd("git checkout -- """_pFile_"""", .pOutput, pLog)
-	}
-	else {
-		quit ..RunCmd("git checkout "_pBranch, .pOutput, pLog)
-	}
-]]></Implementation>
-</Method>
-
-<Method name="Log">
-<Description>
-
-git log</Description>
-<FormalSpec><![CDATA[pFile:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set file = ""
-	if pFile'="" set file = ""_pFile_""
+	set ctr = 0
+	set args($I(ctr)) = "clone"
+	set args($I(ctr)) = repo
+	set args($I(ctr)) = prj
 	
-	quit ..RunCmd("git log --pretty=format:""%h %ad | %s%d [%an]"" --graph --date=short --max-count=20 "_file, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Reset">
-<Description>
-
-git reset</Description>
-<FormalSpec><![CDATA[pFile:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git reset HEAD """_pFile_"""", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Branch">
-<Description>
-
-git branch</Description>
-<FormalSpec><![CDATA[pBranch:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	if pBranch="" {
-		quit ..RunCmd("git branch", .pOutput, pLog)
-	}
-	quit ..RunCmd("git branch """_pBranch_"""", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="ListConfig">
-<Description>
-
-git config --list</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git config --list", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="GetCurrentBranch">
-<Description>
-
-Returns a string with the name of the current branch</Description>
-<ReturnType>%String</ReturnType>
-<Implementation><![CDATA[
-	set result=""
-	set tSC=..CurrentBranch(.output,0)
-	if $$$ISOK(tSC) set result=output(1)
-	quit result
-]]></Implementation>
-</Method>
-
-<Method name="CurrentBranch">
-<Description>
-
-current branch</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git rev-parse --symbolic-full-name --abbrev-ref HEAD", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="DiffStatus">
-<Description>
-
-git diff --name-status: useful to know what changes (status) have been done to files</Description>
-<FormalSpec><![CDATA[pBranch:%String="",pReverse:%Boolean=1,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set current = ..GetCurrentBranch()
-	set opts="--name-status"
-	set:pReverse opts=opts_" -R"
-	quit ..RunCmd("git diff "_opts_" "_pBranch, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="DiffStat">
-<Description>
-
-git diff --stat: useful to report statistics about changes</Description>
-<FormalSpec><![CDATA[pBranch:%String="",pReverse:%Boolean=1,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set current = ..GetCurrentBranch()
-	set opts="--stat"
-	set:pReverse opts=opts_" -R"
-	quit ..RunCmd("git diff "_opts_" "_pBranch, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Diff">
-<Description>
-
-git diff: simple changes made in a file</Description>
-<FormalSpec><![CDATA[pFile:%String="",&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set opts="--patience"
-	quit ..RunCmd("git diff "_opts_" "_pFile, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Push">
-<Description>
-
-git push</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git push "_..GitRepository_" --all", .pOutput, pLog, 1)
+	set status = $ZF(-100,flags,git,.args)
+	
+	set retval=(status=0)
+	
+	return retval
 ]]></Implementation>
 </Method>
 
@@ -1012,186 +832,42 @@ git push</Description>
 <Description>
 
 git pull</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git pull", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="RemoteUpdate">
-<Description>
-
-git remote update group</Description>
-<FormalSpec><![CDATA[pGroup:%String,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git remote update "_pGroup, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="Merge">
-<Description>
-
-git merge</Description>
-<FormalSpec><![CDATA[pBranch:%String,pAbort:%Boolean=0,&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	set opts="--no-commit --no-ff"
-	set:pAbort opts="--abort"
-	quit ..RunCmd("git merge "_opts_" "_pBranch, .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="LsFiles">
-<Description>
-
-git ls-files</Description>
-<FormalSpec><![CDATA[&pOutput,pLog:%Boolean=1]]></FormalSpec>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[	quit ..RunCmd("git ls-files --cached -v", .pOutput, pLog)
-]]></Implementation>
-</Method>
-
-<Method name="RunCmd">
-<Description>
-
-Runs a cmd in the OS and returns the output and error</Description>
-<FormalSpec><![CDATA[cmd:%String,&pOutput,pLog:%Boolean=1,pAsync:%Boolean=0]]></FormalSpec>
-<Private>1</Private>
-<ReturnType>%Status</ReturnType>
-<Implementation><![CDATA[
-	#define DQUOTE(%arg)	$char(34)_%arg_$char(34)
-	#define ISWINDOWS		($zversion(1)=2)
-	
-	set ret=$$$OK
-	try {
-		set (sc,pOutput)=""
-		set text=cmd
-		
-		if ..GitPath'="" {
-			set exe=$piece(cmd," ")
-			set args=$piece(cmd," ", 2, $l(cmd," "))
-			set cmd=$$$DQUOTE(..GitPath_exe)_" "_args
-		}
-		
-		set cmds=""
-		
-		// WINDOWS
-		if $$$ISWINDOWS {
-			if ..AuthorName'="" set cmds = cmds_$lb("set GIT_AUTHOR_NAME="_$$$DQUOTE(..AuthorName))
-			if ..AuthorEmail'="" set cmds = cmds_$lb("set GIT_AUTHOR_EMAIL="_$$$DQUOTE(..AuthorEmail))
-			if ..AuthorName'="" set cmds = cmds_$lb("set GIT_COMMITTER_NAME="_$$$DQUOTE(..AuthorName))
-			if ..AuthorEmail'="" set cmds = cmds_$lb("set GIT_COMMITTER_EMAIL="_$$$DQUOTE(..AuthorEmail))
-			set cmds = cmds_$lb("set GCM_TRACE=1")
-			set cmds = cmds_$lb("cd /D "_$$$DQUOTE(..WorkDir))
-			set cmds = cmds_$lb(cmd)
-			set cmd = $listtostring(cmds, " & ")
-		}
-		// LINUX 
-		else {
-			set cmds=cmds_$lb("export LD_LIBRARY_PATH=""""")
-			if ..AuthorName'="" set cmds = cmds_$lb("export GIT_AUTHOR_NAME="_$$$DQUOTE(..AuthorName))
-			if ..AuthorEmail'="" set cmds = cmds_$lb("export GIT_AUTHOR_EMAIL="_$$$DQUOTE(..AuthorEmail))
-			if ..AuthorName'="" set cmds = cmds_$lb("export GIT_COMMITTER_NAME="_$$$DQUOTE(..AuthorName))
-			if ..AuthorEmail'="" set cmds = cmds_$lb("export GIT_COMMITTER_EMAIL="_$$$DQUOTE(..AuthorEmail))
-			if ..HomeDir'="" set cmds = cmds_$lb("export HOME="_$$$DQUOTE(..HomeDir))
-			set cmds = cmds_$lb("if [ ! -d "_$$$DQUOTE(..WorkDir)_" ]; then mkdir -p "_$$$DQUOTE(..WorkDir)_"; fi")
-			set cmds = cmds_$lb("cd "_$$$DQUOTE(..WorkDir))
-			set cmds = cmds_$lb("env > /tmp/myenv.txt")
-			//set cmds = cmds_$lb("echo $PATH > /tmp/mypath.txt")
-			set cmds = cmds_$lb("whoami > /tmp/whoami.txt")
-			set cmds = cmds_$lb(cmd)
-			set cmd = $listtostring(cmds, " && ")
-		}
-	
-		set stdout = "/STDOUT="""_..OutputFile_""""
-		set stderr = "/STDERR="""_..ErrorFile_""""
-		set logit = ""
-		set async = ""
-		set stdin = ""
-		
-		set:(pLog) logit=" /LOGCMD"
-		//set:(pAsync) async=" /ASYNC"
-		//set:(pAsync) 
-
-		set flags = "/SHELL /NOQUOTE "_stdout_" "_stderr_logit_async_stdin
-		//  
-		//do:(pLog) ..Logger.Info($c(13)_">"_text)
-		//do ..Logger.Debug(cmd)
-		//do ..Logger.Debug(flags)
-
-		// $zf(-1) is deprecated - replaced with $zf(-100)
-		//set rc=$zf(-1,cmd_" 2> """_..ErrorFile_""" > """_..OutputFile_"""")
-		set rc=$zf(-100,flags,cmd)
-		//w:(pAsync) !,"--- waiting 30sec..."
-		//HANG:(pAsync) 30
-						
-		set errorstream=##class(%Stream.FileCharacter).%New()
-		set tsc = errorstream.LinkToFile(..ErrorFile)
-
-		set ind=0
-		if errorstream.Size>0 {		
-			while 'errorstream.AtEnd {
-				set errorLine=errorstream.ReadLine()
-				do ..Logger.Debug(errorLine)
-				set ind=ind+1
-				set pOutput(ind)=errorLine
-			}
-		}
-		do errorstream.Clear()
-		kill errorstream
-		
-		set outputstream=##class(%Stream.FileCharacter).%New()
-		set tsc = outputstream.LinkToFile(..OutputFile)
-	
-		if outputstream.Size>0 {
-			while 'outputstream.AtEnd {
-				set outputLine=outputstream.ReadLine()
-				do ..Logger.Debug(outputLine)
-				set ind=ind+1
-				set pOutput(ind)=outputLine
-			}
-		}
-		do outputstream.Clear()
-		kill outputstream
-		
-	} catch errObj {
-		set ret=errObj.AsStatus()
-	}
-		
-	quit ret
-]]></Implementation>
-</Method>
-
-<Method name="testme">
 <ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
 <Implementation><![CDATA[
 	
-	Set gitpath="C:\GIT\bin\"
-	Set wrkdir="C:\DEV\SrcCtrl"
-	Set homedir=""
-	Set pAuthName="PeteOH"
-	Set pAuthEmail="peteohalloran@gmail.com"
-	Set pout=wrkdir_"\git.out"
-	Set perr=wrkdir_"\git.err"
-	Set gitrepo="https://PeteOH:Bluesky!GH1@github.com/peteoh/srcctrl.git"
+	set retval = $$$OK
 	
-	#dim git As CTRL.GITClient
-	 
-	Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,homedir,pAuthName,pAuthEmail,pout,perr,gitrepo)
-
-	set sout = ""
+	set tmp = $G(^CTRL.Code("workdir"),"/tmp")
+	set git = $G(^CTRL.Code("gitpath"),"/usr/bin/git")
+	set prj = $G(^CTRL.Code("projectdir"),"/CoreDatabase/GIT/BuddyBet-IRISv2.0")
 	
-	Do git.Add("",.sout,1)
-
-	w sout
-
-	Do git.Commit("","testing",.sout)
-
-	w sout
+	set flags = "/LOGCMD /SHELL /STDOUT="""_tmp_"/git.out"" /STDERR="""_tmp_"/git.err"" "
 	
-	Do git.Push(.sout)
+	set args(1) = "-C"
+	set args(2) = prj
+	set args(3) = "pull"
+	
+	set status = $ZF(-100,flags,git,.args)
+	
+	set retval=(status=0)
+	
+	return retval
+]]></Implementation>
+</Method>
 
-	w sout
+<Method name="initSettings">
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ^CTRL.Code("gitpath") = "/usr/bin/git"
+	set ^CTRL.Code("gitrepo") = "github.com/Buddybet-Group/BuddyBet-IRISv2.0.git"
+	set ^CTRL.Code("gittoken") = "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"
+	set ^CTRL.Code("gitusername") = "Buddybetadmin"
+	set ^CTRL.Code("projectdir") = "/CoreDatabase/GIT/BuddyBet-IRISv2.0"
+	set ^CTRL.Code("workdir") = "/tmp"
+	
+	return $$$OK
 ]]></Implementation>
 </Method>
 </Class>
@@ -1428,18 +1104,108 @@ Current log level</Description>
 </Class>
 
 
-<Project name="CTRL" LastModified="2020-08-28 10:17:16.305495">
+
+
+<Project name="CTRL" LastModified="2022-11-02 22:05:44.582137527">
   <Items>
+    <ProjectItem name="CTRL" type="PKG"></ProjectItem>
     <ProjectItem name="CTRL.Checkin.MAC" type="MAC"></ProjectItem>
-    <ProjectItem name="CTRL.Code" type="CLS"></ProjectItem>
-    <ProjectItem name="CTRL.GITClient" type="CLS"></ProjectItem>
-    <ProjectItem name="CTRL.Installer" type="CLS"></ProjectItem>
-    <ProjectItem name="CTRL.Logger" type="CLS"></ProjectItem>
+    <ProjectItem name="CTRL.Pull.MAC" type="MAC"></ProjectItem>
   </Items>
-  <BreakPoints>
-    <BreakPoint Routine="CTRL.Code.CLS" Offset="export+2"></BreakPoint>
-    <BreakPoint Routine="CTRL.Code.CLS" Offset="pkgmatch+4"></BreakPoint>
-    <BreakPoint Routine="CTRL.GITClient.CLS" Offset="testme+2"></BreakPoint>
-  </BreakPoints>
+  <WatchVariables>
+    <WatchVariable Variable="package" Pane="1"></WatchVariable>
+    <WatchVariable Variable="err" Pane="1"></WatchVariable>
+    <WatchVariable Variable="dir" Pane="1"></WatchVariable>
+    <WatchVariable Variable="sc" Pane="1"></WatchVariable>
+    <WatchVariable Variable="filename" Pane="1"></WatchVariable>
+  </WatchVariables>
 </Project>
+
+
+<Routine name="CTRL.Pull" type="MAC" languagemode="0" timestamp="66415,6922.340946104"><![CDATA[
+Pull ; execute github pull
+
+	s defgitrepo=""
+	s defprojectdir=""
+	s defgitpath=""
+	s defgitusername = ""
+	s defgittoken = ""
+		
+	s:($D(^CTRL.Code("gitrepo"))) defgitrepo=^CTRL.Code("gitrepo")  // "https://github.com/Buddybet-Group/BuddyBet-IRISv2.0.git"
+	s:($D(^CTRL.Code("projectdir"))) defprojectdir=^CTRL.Code("projectdir") //"/CoreDatabase/GIT/BuddyBet-IRISv2.0/"
+	s:($D(^CTRL.Code("gitpath"))) defgitpath=^CTRL.Code("gitpath") // "/usr/bin/"
+	s:($D(^CTRL.Code("gitusername"))) defgitusername=^CTRL.Code("gitusername") // "Buddybetadmin"
+	s:($D(^CTRL.Code("gittoken"))) defgittoken=^CTRL.Code("gittoken") // "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"
+
+	w !, "This routine assumes the git repo has already been cloned, and will now just pull from github"
+	r !, "Are you sure (Y/n)?", cont
+    w !
+    
+	if ((cont = "Y") || (cont = "y") || (cont = "")) {
+		w !, "GIT path ("_defgitpath_"):"  r gitpath
+		w !, "GIT repo ("_defgitrepo_"):"  r gitrepo
+		w !, "Local Dir ("_defprojectdir_"):"  r projectdir	
+		w !, "Username ("_defgitusername_"):"  r gitusername	
+		w !, "GIT Token (*****):"  r gittoken	
+	
+		// if values are set then save to globals
+		s:(gitpath'="") ^CTRL.Code("gitpath")=gitpath		
+		s:(gitrepo'="") ^CTRL.Code("gitrepo")=gitrepo		
+		s:(projectdir'="") ^CTRL.Code("projectdir")=projectdir
+		s:(gitusername'="") ^CTRL.Code("gitusername")=gitusername
+		s:(gittoken'="") ^CTRL.Code("gittoken")=gittoken
+
+		// if values are not set then get the default values (from globals)
+		s:(gitpath="") gitpath = defgitpath
+		s:(gitrepo="") gitrepo = defgitrepo
+		s:(projectdir="") projectdir = defprojectdir
+		s:(gitusername="") gitusername = defgitusername
+		s:(gittoken="") gittoken = defgittoken
+
+		if ( (gitrepo'="") && (projectdir'="") && (gitpath'="") && (gitusername'="") && (gittoken'="") ) {
+
+			//write !,"Enter GIT Token (******): "
+			//use 0:(:/echo=0)  
+			//set pass=""
+			//for  read *c quit:c=13  set pass=pass_$c(c) write "*"
+			//use 0:(:/echo=1)
+			
+			// if password is empty then use the default
+			//s:(pass'="") ^CTRL.Code("gittoken")=pass
+			//s:(pass="") pass = defgittoken
+
+			s userpass = user_":"_gittoken_"@"
+			
+			s $p(gitrepo,"/",3) = userpass_$p(gitrepo,"/",3)
+
+			set wrkdir = ##class(CTRL.Code).workdir()
+			Set pout=wrkdir_"/git.out"
+			Set perr=wrkdir_"/git.err"
+			
+			// Now call GitHub add, commit, push
+
+			w !,!," Pulling GIT..."
+
+			Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,"","","",pout,perr,gitrepo)
+
+			set sout = ""
+			
+			Do git.Pull(.sout)
+
+			w !,!,"FINISHED." _sout
+						
+		} 
+		else
+		{
+			w !, "ERROR: you need to provide the git repo (eg https://github.com/name/repo.git)"
+			W !, "       and git binary folder (eg: c:\git\bin )"
+			W !, "       and local folder (eg: c:\localfolder )"
+		}
+
+	
+	   
+   }  
+
+
+]]></Routine>
 </Export>
