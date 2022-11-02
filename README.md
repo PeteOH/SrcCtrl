@@ -7,12 +7,31 @@ To Install this in your IRIS instance just import ` /src/CTRL.xml `. This includ
 
 ### notes on usage
 
-In order to use this utility: 
-* If the code is not yet in a Git Repository then create an empty repoository first.  
-  * On the IRIS server perform a **git clone** to a local folder.  
-  * You do not need to store credentials - the routine will prompt for git user and passwd. If you wish to store credentials then you can follow article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a>  
-  * If you wish to only run on a single Namespace:
-Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance - **SKIP The Installer.cls**.
+**Latest:** relies on the project being cloned with the GIT HTML including the user:token in the path
+
+## PRIMARY USAGE 
+Now the core of this utility is to just 
+1. pull the latest from GIT to the server GIT Folder
+2. import these into the current namespace
+3. Load data from central DEV namespace (JDBC SQL Gateway)
+
+## Routine run import utility
+
+Start a terminal, change to the relevant Namespace... (eg: your username)
+
+```
+PETEOH> do ##class(CTRL.GITClient).Pull()
+
+PETEOH> do ##class(CTRL.Code).importUpdated()
+
+```
+Here you should look at any issues that are presented. 
+
+```
+PETEOH> do ##class(CTRL.Data).refreshData()
+
+```
+
 
 ## Routine run export AND Git commit
 
@@ -118,6 +137,11 @@ USER> do ##class(CTRL.Code).import()
 this will recurse through the folders and import and compile the files.
 
 
+## OTHER NOTES
 
-```
+* If the code is not yet in a Git Repository then create an empty repoository first.  
+* On the IRIS server perform a **git clone** to a local folder.  
+ * You do not need to store credentials - the routine will prompt for git user and passwd. If you wish to store credentials then you can follow article: <a href="https://www.shellhacks.com/git-config-username-password-store-credentials" target="_blank">Git Config Username & Password</a>  
+* If you wish to only run on a single Namespace:
+Import/compile the class and routine files `/src/CTRL/*` into you IRIS instance - **SKIP The Installer.cls**.
 
