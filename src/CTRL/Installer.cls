@@ -13,7 +13,9 @@ Parameter iscProductVersion = {$case(
     )};
 
 /// This method is invoked when a class is compiled.
-ClassMethod CreateProjection(cls As %String, ByRef params) As %Status
+ClassMethod CreateProjection(
+	cls As %String,
+	ByRef params) As %Status
 {
 
 	new $Namespace
@@ -36,7 +38,10 @@ ClassMethod CreateProjection(cls As %String, ByRef params) As %Status
 }
 
 /// This method is invoked when a class is 'uncompiled'.
-ClassMethod RemoveProjection(cls As %String, ByRef params, recompile As %Boolean) As %Status
+ClassMethod RemoveProjection(
+	cls As %String,
+	ByRef params,
+	recompile As %Boolean) As %Status
 {
 
 	set st = $$$OK
@@ -140,4 +145,3 @@ ClassMethod UnMap(fromNS As %String) As %Status
 }
 
 }
-

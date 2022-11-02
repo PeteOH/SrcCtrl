@@ -10,7 +10,10 @@ Parameter INFO = 2;
 
 Parameter ERROR = 7;
 
-ClassMethod Log(pLevel As %String, pMsg As %String, pNL As %Boolean = 1)
+ClassMethod Log(
+	pLevel As %String,
+	pMsg As %String,
+	pNL As %Boolean = 1)
 {
 	if pLevel >= ..#LOGLEVEL {
 		write:pNL !
@@ -19,20 +22,25 @@ ClassMethod Log(pLevel As %String, pMsg As %String, pNL As %Boolean = 1)
 	quit
 }
 
-ClassMethod Debug(pMsg As %String, pNL As %Boolean = 1)
+ClassMethod Debug(
+	pMsg As %String,
+	pNL As %Boolean = 1)
 {
 	do ..Log(..#DEBUG, pMsg, pNL)
 }
 
-ClassMethod Error(pMsg As %String, pNL As %Boolean = 1)
+ClassMethod Error(
+	pMsg As %String,
+	pNL As %Boolean = 1)
 {
 	do ..Log(..#ERROR, pMsg, pNL)
 }
 
-ClassMethod Info(pMsg As %String, pNL As %Boolean = 1)
+ClassMethod Info(
+	pMsg As %String,
+	pNL As %Boolean = 1)
 {
 	do ..Log(..#INFO, pMsg, pNL)
 }
 
 }
-

@@ -1,0 +1,84 @@
+ROUTINE CTRL.Pull
+Pull ; execute github pull
+
+	s defgitrepo=""
+	s defprojectdir=""
+	s defgitpath=""
+	s defgitusername = ""
+	s defgittoken = ""
+		
+	s:($D(^CTRL.Code("gitrepo"))) defgitrepo=^CTRL.Code("gitrepo")  // "https://github.com/Buddybet-Group/BuddyBet-IRISv2.0.git"
+	s:($D(^CTRL.Code("projectdir"))) defprojectdir=^CTRL.Code("projectdir") //"/CoreDatabase/GIT/BuddyBet-IRISv2.0/"
+	s:($D(^CTRL.Code("gitpath"))) defgitpath=^CTRL.Code("gitpath") // "/usr/bin/"
+	s:($D(^CTRL.Code("gitusername"))) defgitusername=^CTRL.Code("gitusername") // "Buddybetadmin"
+	s:($D(^CTRL.Code("gittoken"))) defgittoken=^CTRL.Code("gittoken") // "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"
+
+	w !, "This routine assumes the git repo has already been cloned, and will now just pull from github"
+	r !, "Are you sure (Y/n)?", cont
+    w !
+    
+	if ((cont = "Y") || (cont = "y") || (cont = "")) {
+		w !, "GIT path ("_defgitpath_"):"  r gitpath
+		w !, "GIT repo ("_defgitrepo_"):"  r gitrepo
+		w !, "Local Dir ("_defprojectdir_"):"  r projectdir	
+		w !, "Username ("_defgitusername_"):"  r gitusername	
+		w !, "GIT Token (*****):"  r gittoken	
+	
+		// if values are set then save to globals
+		s:(gitpath'="") ^CTRL.Code("gitpath")=gitpath		
+		s:(gitrepo'="") ^CTRL.Code("gitrepo")=gitrepo		
+		s:(projectdir'="") ^CTRL.Code("projectdir")=projectdir
+		s:(gitusername'="") ^CTRL.Code("gitusername")=gitusername
+		s:(gittoken'="") ^CTRL.Code("gittoken")=gittoken
+
+		// if values are not set then get the default values (from globals)
+		s:(gitpath="") gitpath = defgitpath
+		s:(gitrepo="") gitrepo = defgitrepo
+		s:(projectdir="") projectdir = defprojectdir
+		s:(gitusername="") gitusername = defgitusername
+		s:(gittoken="") gittoken = defgittoken
+
+		if ( (gitrepo'="") && (projectdir'="") && (gitpath'="") && (gitusername'="") && (gittoken'="") ) {
+
+			//write !,"Enter GIT Token (******): "
+			//use 0:(:/echo=0)  
+			//set pass=""
+			//for  read *c quit:c=13  set pass=pass_$c(c) write "*"
+			//use 0:(:/echo=1)
+			
+			// if password is empty then use the default
+			//s:(pass'="") ^CTRL.Code("gittoken")=pass
+			//s:(pass="") pass = defgittoken
+
+			s userpass = user_":"_gittoken_"@"
+			
+			s $p(gitrepo,"/",3) = userpass_$p(gitrepo,"/",3)
+
+			set wrkdir = ##class(CTRL.Code).workdir()
+			Set pout=wrkdir_"/git.out"
+			Set perr=wrkdir_"/git.err"
+			
+			// Now call GitHub add, commit, push
+
+			w !,!," Pulling GIT..."
+
+			Set git=##class(CTRL.GITClient).%New(gitpath,wrkdir,"","","",pout,perr,gitrepo)
+
+			set sout = ""
+			
+			Do git.Pull(.sout)
+
+			w !,!,"FINISHED." _sout
+						
+		} 
+		else
+		{
+			w !, "ERROR: you need to provide the git repo (eg https://github.com/name/repo.git)"
+			W !, "       and git binary folder (eg: c:\git\bin )"
+			W !, "       and local folder (eg: c:\localfolder )"
+		}
+
+	
+	   
+   }  
+

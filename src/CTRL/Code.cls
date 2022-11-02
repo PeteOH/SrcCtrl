@@ -1,7 +1,9 @@
 Class CTRL.Code Extends %Persistent
 {
 
-ClassMethod pkgmatch(masks, code) As %Boolean
+ClassMethod pkgmatch(
+	masks,
+	code) As %Boolean
 {
 	if ( $LG(masks,1) = "" )
 	{
@@ -19,7 +21,13 @@ ClassMethod pkgmatch(masks, code) As %Boolean
 }
 
 /// export all available code
-ClassMethod export(packagelist = "", generated = 0, system = 0, percent = 0, mapped = 0, dfi = 0)
+ClassMethod export(
+	packagelist = "",
+	generated = 0,
+	system = 0,
+	percent = 0,
+	mapped = 0,
+	dfi = 0)
 {
 
 	#define export(%code, %file) s sc = $system.OBJ.ExportUDL(%code, %file,"/diffexport") ##continue
@@ -126,12 +134,19 @@ ClassMethod export(packagelist = "", generated = 0, system = 0, percent = 0, map
 }
 
 /// import all from workdir
-ClassMethod import(filemask = "*.xml;*.cls;*.mac;*.int;*.inc;*.dfi", qspec = "cku-d", ByRef err = "", recurse = 1, ByRef loaded = "", verbose = 1) As %Status
+/// "*.xml;*.cls;*.mac;*.int;*.inc;*.dfi",
+ClassMethod import(
+	filemask = "*.cls;*.mac;*.inc",
+	qspec = "cku-d",
+	ByRef err = "",
+	recurse = 1,
+	ByRef loaded = "",
+	verbose = 1) As %Status
 {
 	#define push(%dir) s dirs( $i( dirs ) ) = %dir
 	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
 	#define isDirectory(%type) ( %type = "D" )
-	#define log w !, $piece(filename,..workdir(),2), " " w:sc "Ok" d:'sc $system.OBJ.DisplayError(sc)
+	#define log w:('sc) !, $piece(filename,..workdir(),2), " " d:('sc) $system.OBJ.DisplayError(sc)
 	
 	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
 	if verbose w "#; Importing from ", dir,!
@@ -163,8 +178,18 @@ ClassMethod import(filemask = "*.xml;*.cls;*.mac;*.int;*.inc;*.dfi", qspec = "ck
 			if verbose $$$log
 			
 	    }
+		s flags = "cukbr-d/multicompile"
+		s flags = "cukbr-d"
 		// compile all the loaded classes to obey dependencies
-		s sc=$system.OBJ.CompileList( .loaded, "cukbr-d/multicompile",.err )
+		//if dir = ..workdir()
+		//{
+			s sc=$system.OBJ.CompileList( .loaded, flags,.err )
+		//}
+		//else
+		//{
+		//	set package = $REPLACE($REPLACE(dir,..workdir()_"/",""),"/",".")
+		//	s sc=$system.OBJ.CompilePackage( package, flags,.err )
+		//}
 		
 	}
 	
@@ -183,7 +208,10 @@ ClassMethod import(filemask = "*.xml;*.cls;*.mac;*.int;*.inc;*.dfi", qspec = "ck
 	Q sc
 }
 
-ClassMethod patch(filename = "", commitFrom = "", commitTo = "") As %Status
+ClassMethod patch(
+	filename = "",
+	commitFrom = "",
+	commitTo = "") As %Status
 {
 	s gln = ..gln()
 	s git = @gln@("git")
@@ -214,7 +242,9 @@ ClassMethod patch(filename = "", commitFrom = "", commitTo = "") As %Status
 	return sc
 }
 
-ClassMethod fixXMLLine(documentName, filename) As %Status
+ClassMethod fixXMLLine(
+	documentName,
+	filename) As %Status
 {
 	set stream = ##class(%Stream.FileBinary).%New()
 	do stream.LinkToFile(filename)
@@ -229,7 +259,9 @@ ClassMethod fixXMLLine(documentName, filename) As %Status
 	return stream.%Save()
 }
 
-ClassMethod inFilter(ByRef filtermask, filename) As %Boolean
+ClassMethod inFilter(
+	ByRef filtermask,
+	filename) As %Boolean
 {
 	s result=0
 	for 
@@ -385,12 +417,18 @@ ClassMethod filename(code)
 }
 
 /// import from workdir all files with ts newer than code ts in db
-ClassMethod importUpdated(filemask = "*.*", qspec = "cku-d", ByRef err = "", recurse = 1, ByRef loaded = "", verbose = 1) As %Status
+ClassMethod importUpdated(
+	filemask = "*.*",
+	qspec = "cku-d",
+	ByRef err = "",
+	recurse = 1,
+	ByRef loaded = "",
+	verbose = 1) As %Status
 {
 	#define push(%dir) s dirs( $i( dirs ) ) = %dir
 	#define next(%i,%dir) s %i=$o( dirs( "" ), 1, %dir )  k:%i'="" dirs(%i)
 	#define isDirectory(%type) ( %type = "D" )
-	#define log w !, $piece(filename,..workdir(),2)," " w:sc "Ok" d:'sc $system.OBJ.DisplayError( sc )
+	#define log w:('sc) !, $piece(filename,..workdir(),2)," " d:('sc) $system.OBJ.DisplayError( sc )
 
 	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
 	if verbose w "#; Importing updated from ", dir,!
@@ -437,7 +475,9 @@ ClassMethod importUpdated(filemask = "*.*", qspec = "cku-d", ByRef err = "", rec
 }
 
 /// presumable codename
-ClassMethod codename(filename, ByRef ext = "")
+ClassMethod codename(
+	filename,
+	ByRef ext = "")
 {
 	s ext = $p( filename, ".", * ), ext = $zcvt( ext, "l" )
 	s path = ##class(%File).NormalizeDirectory( ext, ..workdir() )
@@ -450,7 +490,9 @@ ClassMethod codename(filename, ByRef ext = "")
 	Q codename
 }
 
-ClassMethod codets(codename, ext)
+ClassMethod codets(
+	codename,
+	ext)
 {
 	s ts = ""
 	if ext'="dfi" {
@@ -502,4 +544,3 @@ Storage Default
 }
 
 }
-
