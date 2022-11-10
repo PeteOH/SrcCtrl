@@ -148,6 +148,7 @@ ClassMethod import(
 	#define isDirectory(%type) ( %type = "D" )
 	#define log w:('sc) !, $piece(filename,..workdir(),2), " " d:('sc) $system.OBJ.DisplayError(sc)
 	
+	s mylist = ""
 	s sc = 1, dirs = "", dir = ..workdir() $$$push(dir)
 	if verbose w "#; Importing from ", dir,!
 	d ..setIgnore(.fm)
@@ -173,25 +174,20 @@ ClassMethod import(
 			} else {
 				// load classes only
 				s sc = $system.OBJ.Load( filename, "k-d", .err, .loaded)
+				s:(sc) mylist = mylist _ $CASE(mylist,"":"",:",") _ loaded
 			}
 
 			if verbose $$$log
 			
 	    }
-		s flags = "cukbr-d/multicompile"
+		//s flags = "cukbr-d/multicompile"
 		s flags = "cukbr-d"
-		// compile all the loaded classes to obey dependencies
-		//if dir = ..workdir()
-		//{
-			s sc=$system.OBJ.CompileList( .loaded, flags,.err )
-		//}
-		//else
-		//{
-		//	set package = $REPLACE($REPLACE(dir,..workdir()_"/",""),"/",".")
-		//	s sc=$system.OBJ.CompilePackage( package, flags,.err )
-		//}
-		
+		s:(mylist'="") sc=$system.OBJ.CompileList( .mylist, flags,.err )
+		kill mylist
+		set mylist = ""
+
 	}
+		
 	
 	if verbose {
 	

@@ -1,7 +1,7 @@
 {
     "objectscript.conn": {
         "server": "dev",
-        "ns": "USER",
+        "ns": "PETEOH",
         "active": true
     }
 }

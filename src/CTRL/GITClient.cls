@@ -65,15 +65,16 @@ Method %OnNew(
 
 /// 
 /// git clone
-Method Clone() As %Status
+ClassMethod Clone() As %Status
 {
 	set retval = $$$OK
 
 	set git = $G(^CTRL.Code("gitpath"),"/usr/bin/git")
 	set repo = $G(^CTRL.Code("gitrepo"),"github.com/Buddybet-Group/BuddyBet-IRISv2.0.git")
 	set user = $G(^CTRL.Code("gitusername"),"Buddybetadmin")
-	set token = $G(^CTRL.Code("gittoken"),"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")
+	set token = $G(^CTRL.Code("gittoken"),"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")
 	set prj = $G(^CTRL.Code("projectdir"), "/CoreDatabase/GIT/BuddyBet-IRISv2.0")
+	set tmp = $G(^CTRL.Code("workdir"), "/tmp")
 	
 	set repo = "https://"_user_":"_token_"@"_repo
 	set flags = "/LOGCMD /SHELL /STDOUT="""_tmp_"/git.out"" /STDERR="""_tmp_"/git.err"" "
@@ -111,6 +112,8 @@ ClassMethod Pull() As %Status
 	
 	set retval=(status=0)
 	
+	do ..showGitOutput(tmp_"/git.out",tmp_"/git.err")
+
 	return retval
 }
 
@@ -118,12 +121,46 @@ ClassMethod initSettings() As %Status
 {
 	set ^CTRL.Code("gitpath") = "/usr/bin/git"
 	set ^CTRL.Code("gitrepo") = "github.com/Buddybet-Group/BuddyBet-IRISv2.0.git"
-	set ^CTRL.Code("gittoken") = "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"
+	set ^CTRL.Code("gittoken") = "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"
 	set ^CTRL.Code("gitusername") = "Buddybetadmin"
 	set ^CTRL.Code("projectdir") = "/CoreDatabase/GIT/BuddyBet-IRISv2.0"
 	set ^CTRL.Code("workdir") = "/tmp"
+	set ^CTRL.Code("sqlgateway") = "IRISDEV"
 	
 	return $$$OK
+}
+
+ClassMethod showGitOutput(
+	outPath = "/tmp/git.out",
+	errPath = "/tmp/git.err") As %Status
+{
+	set retval = $$$OK
+
+	w !,"GIT LOG:"
+	#DIM file AS %Library.File = ##class(%File).%New(outPath)
+	set tSC = file.Open("R")
+	if tSC
+	{
+		while 'file.AtEnd
+		{
+			w !,file.ReadLine(,.tSC)
+		}
+		do file.Close()
+	}
+
+	w !!,"GIT ERR:"
+	set file = ##class(%File).%New(errPath)
+	set tSC = file.Open("R")
+	if tSC
+	{
+		while 'file.AtEnd
+		{
+			w !,file.ReadLine(,.tSC)
+		}
+		do file.Close()
+	}
+
+	return retval
 }
 
 }

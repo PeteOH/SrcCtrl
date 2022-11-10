@@ -1,0 +1,28 @@
+ROUTINE CTRL.FullLoad
+FullLoad; combine GIT PULL, IMPORT and DATAREFRESH
+
+	w !, "This routine assumes the git repo has already been cloned, and will now just pull from github"
+	w !, "then will import all classes, then load the data from DEV Namespace."
+	w !!,"DO NOT RUN THIS IN THE BUDDYBET NAMESPACE"
+	r !, "Are you sure (Y/n)?", cont
+    w !,""
+    
+    set ns = $NAMESPACE
+    
+    if ns = "BUDDYBET"
+    {
+	    w !, "THIS MUST NOT BE RUN IN THE BUDDYBET NS !!!"
+	    Q 
+    }
+    
+	if ((cont = "Y") || (cont = "y") || (cont = "")) 
+	{
+		
+		set pullStatus = ##class(CTRL.GITClient).Pull()
+
+		set importStatus = ##class(CTRL.Code).import()
+
+		set dataStatus = ##class(CTRL.Data).refreshData()
+	   
+   }  
+
